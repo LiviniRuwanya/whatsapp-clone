@@ -1,0 +1,2235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <title>ChatConnect</title>
+  <style>
+    :root {
+      --indigo: #6d5efc;
+      --indigo-deep: #4f46e5;
+      --ink: #1e2440;
+      --muted: #8a8ea3;
+      --line: #ececf3;
+      --rail: #201f3a;
+      --sidebar-bg: #ffffff;
+      --panel-bg: #f5f4fb;
+      --green: #22c55e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+    }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: var(--ink);
+      background: #fff;
+      overflow: hidden;
+    }
+
+    /* Full-viewport 3-pane shell: rail | sidebar | main */
+    .layout {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      height: 100%;
+      min-height: 100vh;
+      min-height: 100dvh;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      background: var(--panel-bg);
+    }
+
+    /* ---------- Left icon rail (narrow, never grows) ---------- */
+    .rail {
+      flex: 0 0 68px;
+      width: 68px;
+      min-width: 68px;
+      max-width: 68px;
+      height: auto;
+      align-self: stretch;
+      background: var(--rail);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 0;
+      gap: 6px;
+      z-index: 2;
+    }
+    .rail .rail-logo {
+      width: 40px; height: 40px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--indigo), var(--indigo-deep));
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px;
+      flex: 0 0 auto;
+    }
+    .rail-btn {
+      position: relative;
+      flex: 0 0 auto;
+      width: 46px; height: 46px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; cursor: pointer;
+      color: #a7a8c4;
+      transition: background .12s ease, color .12s ease;
+    }
+    .rail-btn:hover { background: rgba(255,255,255,.08); color: #fff; }
+    .rail-btn.active { background: linear-gradient(135deg, var(--indigo), var(--indigo-deep)); color: #fff; }
+    .rail-btn .rail-badge {
+      position: absolute; top: 6px; right: 8px; min-width: 16px; height: 16px;
+      padding: 0 4px; border-radius: 8px; background: #ef4444; color: #fff;
+      font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--rail);
+    }
+    .rail-spacer { flex: 1 1 auto; min-height: 8px; width: 100%; }
+
+    /* ---------- Sidebar (fixed width — must NOT collapse) ---------- */
+    .sidebar {
+      flex: 0 0 380px;
+      width: 380px;
+      min-width: 320px;
+      max-width: 420px;
+      height: auto;
+      align-self: stretch;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 1;
+    }
+    .sidebar-top {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      flex: 0 0 auto;
+    }
+    .sidebar-top .brand-name { font-size: 17px; font-weight: 800; color: var(--indigo-deep); flex: 1; }
+    .icon-btn {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: #f3f3f9; border: none; cursor: pointer; color: #5b6070;
+      transition: background .12s ease, color .12s ease;
+    }
+    .icon-btn:hover { background: #e9e7fb; color: var(--indigo-deep); }
+
+    .search {
+      display: flex; align-items: center; gap: 10px;
+      margin: 12px 14px 6px;
+      background: #f3f3f9; border-radius: 12px; padding: 10px 12px;
+      flex: 0 0 auto;
+    }
+    .search svg { color: var(--muted); flex: none; }
+    .search input { border: none; background: none; outline: none; width: 100%; font-size: 14px; color: var(--ink); }
+    .search input::placeholder { color: var(--muted); }
+
+    /* Online now strip */
+    .online-section {
+      padding: 8px 0 6px;
+      border-bottom: 1px solid var(--line);
+      flex: 0 0 auto;
+    }
+    .online-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 4px 16px 8px;
+    }
+    .online-head .label { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--muted); }
+    .online-head .see-all { font-size: 12px; font-weight: 600; color: var(--indigo); cursor: pointer; background: none; border: none; }
+    .online-row {
+      display: flex; gap: 14px; overflow-x: auto; padding: 0 16px 6px;
+      scrollbar-width: none;
+    }
+    .online-row::-webkit-scrollbar { display: none; }
+    .online-section.collapsed .online-row { display: none; }
+    .online-item { flex: none; width: 52px; text-align: center; cursor: pointer; }
+    .avatar-wrap { position: relative; width: 46px; height: 46px; margin: 0 auto 5px; }
+    .avatar {
+      width: 46px; height: 46px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 16px; background-size: cover; background-position: center;
+    }
+    .avatar.lg { width: 40px; height: 40px; }
+    .online-dot {
+      position: absolute; bottom: 0; right: 0; width: 12px; height: 12px;
+      border-radius: 50%; background: var(--green); border: 2.5px solid #fff;
+    }
+    .online-name { font-size: 11px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .empty-hint { font-size: 13px; color: var(--muted); padding: 14px 16px; }
+
+    /* Conversation list */
+    .conv-list { flex: 1; overflow-y: auto; padding: 6px 8px; }
+    .call-list { flex: 1; overflow-y: auto; padding: 6px 8px; display: none; }
+    .sidebar.show-calls .online-section,
+    .sidebar.show-calls .conv-list,
+    .sidebar.show-calls .search { display: none; }
+    .sidebar.show-calls .call-list { display: block; }
+    .sidebar-panel-title {
+      display: none; padding: 4px 18px 10px; font-size: 12px; font-weight: 700;
+      letter-spacing: .06em; color: var(--muted);
+    }
+    .sidebar.show-calls .sidebar-panel-title { display: block; }
+    .call-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px; border-radius: 12px; cursor: pointer;
+    }
+    .call-row:hover { background: #f3f1ff; }
+    .call-main { flex: 1; min-width: 0; }
+    .call-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+    .call-name { font-size: 14.5px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .call-name.missed { color: #e11d48; }
+    .call-time { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+    .call-meta {
+      display: flex; align-items: center; gap: 6px; margin-top: 3px;
+      font-size: 12px; color: var(--muted);
+    }
+    .call-meta.missed { color: #e11d48; }
+    .call-meta svg { flex-shrink: 0; }
+    .call-dir { opacity: .85; }
+    .conv {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 10px; border-radius: 12px; cursor: pointer;
+    }
+    .conv:hover { background: #f6f5fd; }
+    .conv.active { background: #efeafe; }
+    .conv-avatar-wrap { position: relative; flex: none; }
+    .conv .online-dot { border-color: #fff; }
+    .conv-main { flex: 1; min-width: 0; }
+    .conv-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .conv-name { font-size: 15px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .conv-time { font-size: 11px; color: var(--muted); flex: none; }
+    .conv-time.unread { color: var(--indigo); font-weight: 700; }
+    .conv-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+    .conv-preview { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .conv-preview.unread { color: var(--ink); font-weight: 600; }
+    .conv-badge {
+      flex: none; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
+      background: var(--indigo); color: #fff; font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ---------- Main panel ---------- */
+    .main {
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
+      height: auto;
+      align-self: stretch;
+      background: var(--panel-bg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .empty-state {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; gap: 14px; padding: 24px; color: var(--muted);
+    }
+    .empty-logo {
+      width: 96px; height: 96px; border-radius: 28px;
+      background: linear-gradient(135deg, var(--indigo), var(--indigo-deep));
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 18px 40px rgba(79,70,229,.35);
+    }
+    .empty-state h2 { color: var(--ink); font-size: 22px; font-weight: 800; }
+    .empty-state p { max-width: 360px; font-size: 14px; line-height: 1.6; }
+
+    .thread {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      display: none;
+      overflow: hidden;
+    }
+    /* Grid keeps head + compose pinned; only the middle row scrolls */
+    .thread.show {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto auto;
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .main.has-thread .empty-state { display: none; }
+    .thread-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 18px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      min-height: 64px;
+      grid-row: 1;
+    }
+    .thread-back { display: none; flex-shrink: 0; }
+    .thread-head .who { flex: 1; min-width: 0; }
+    .thread-head .who .n { font-size: 15px; font-weight: 700; }
+    .thread-head .who .s { font-size: 12px; color: var(--muted); }
+    .thread-body {
+      grid-row: 2;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(109,94,252,.04), transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(79,70,229,.05), transparent 40%),
+        var(--panel-bg);
+    }
+    .thread-day {
+      align-self: center;
+      margin: 10px 0 4px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.92);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11.5px;
+      font-weight: 650;
+      letter-spacing: .02em;
+      flex: 0 0 auto;
+    }
+    /* Chat bubbles: width hugs content; mine right / theirs left */
+    .msg {
+      width: fit-content;
+      max-width: min(65%, 420px);
+      padding: 8px 10px 6px;
+      border-radius: 10px;
+      font-size: 14.5px;
+      line-height: 1.4;
+      word-wrap: break-word;
+      box-shadow: 0 1px 1px rgba(0,0,0,.06);
+      flex: 0 0 auto;
+      margin: 0;
+    }
+    .msg-text { white-space: pre-wrap; }
+    .msg.mine {
+      align-self: flex-end;
+      margin-left: auto;
+      background: #d9d4ff;
+      border-top-right-radius: 3px;
+    }
+    .msg.theirs {
+      align-self: flex-start;
+      margin-right: auto;
+      background: #fff;
+      border-top-left-radius: 3px;
+    }
+
+    /* Centered system call pills — same rhythm as chat bubbles */
+    .msg.call-event {
+      align-self: center;
+      margin-left: auto;
+      margin-right: auto;
+      width: auto;
+      max-width: min(85%, 340px);
+      background: transparent;
+      box-shadow: none;
+      padding: 0;
+      text-align: center;
+    }
+    .msg.call-event .call-event-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 12.5px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--muted);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 12px;
+    }
+    .msg.call-event.missed .call-event-label {
+      color: #e11d48;
+      border-color: #fecdd3;
+      background: #fff1f2;
+    }
+    .msg.call-event .msg-meta {
+      justify-content: center;
+      margin-top: 3px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .msg-meta {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 4px;
+      margin-top: 3px;
+      font-size: 11px;
+      color: var(--muted);
+      user-select: none;
+      white-space: nowrap;
+    }
+    .msg-ticks { font-size: 12px; letter-spacing: -1px; color: var(--muted); }
+    .msg-ticks.read { color: #53bdeb; }
+
+    .msg-media {
+      display: block; margin: 0 0 4px; max-width: 100%; border-radius: 8px;
+      overflow: hidden; cursor: pointer; position: relative; background: #0b141a;
+    }
+    .msg-media img, .msg-media video {
+      display: block; width: 100%; max-width: 260px; max-height: 280px; object-fit: cover;
+    }
+    .msg-media .play-overlay {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.28); pointer-events: none;
+    }
+    .msg-media .play-overlay span {
+      width: 48px; height: 48px; border-radius: 50%; background: rgba(0,0,0,.55);
+      display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px;
+    }
+    .msg-file {
+      display: flex; align-items: center; gap: 10px; min-width: 180px; max-width: 100%;
+      padding: 8px 10px; border-radius: 8px; background: rgba(0,0,0,.05);
+      text-decoration: none; color: inherit;
+    }
+    .msg-file:hover { background: rgba(0,0,0,.08); }
+    .msg-file-icon {
+      width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--indigo), var(--indigo-deep));
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800;
+    }
+    .msg-file-meta { min-width: 0; flex: 1; }
+    .msg-file-name {
+      font-size: 13px; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .msg-file-size { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .msg-caption { margin-top: 4px; }
+
+    .thread-compose {
+      grid-row: 4;
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #fff;
+      border-top: 1px solid var(--line);
+      align-items: center;
+      z-index: 2;
+    }
+    .thread-compose .attach {
+      width: 40px; height: 40px; border: none; border-radius: 50%; background: transparent; color: var(--muted);
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .thread-compose .attach:hover:not(:disabled) { color: var(--indigo); background: #f0efff; }
+    .thread-compose .attach:disabled { opacity: .45; cursor: not-allowed; }
+    .thread-compose input {
+      flex: 1; border: 1px solid var(--line); background: #f7f7fb; border-radius: 22px;
+      padding: 11px 16px; font-size: 14px; outline: none;
+      min-width: 0;
+    }
+    .thread-compose input:focus { border-color: var(--indigo); background: #fff; }
+    .thread-compose .send {
+      width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer;
+      background: linear-gradient(135deg, var(--indigo), var(--indigo-deep)); color: #fff;
+      display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .thread-compose .send:hover { filter: brightness(1.05); }
+    .upload-bar {
+      grid-row: 3;
+      display: none; align-items: center; gap: 10px; padding: 8px 16px; background: #f3f0ff;
+      border-top: 1px solid var(--line); font-size: 12px; color: var(--ink);
+    }
+    .upload-bar.show { display: flex; }
+    .upload-bar .track { flex: 1; height: 6px; background: #ddd; border-radius: 99px; overflow: hidden; }
+    .upload-bar .fill { height: 100%; width: 0%; background: var(--indigo); transition: width .15s ease; }
+
+    .lightbox {
+      display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.88);
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .lightbox.show { display: flex; }
+    .lightbox-inner { max-width: min(920px, 96vw); max-height: 92vh; position: relative; }
+    .lightbox-inner img, .lightbox-inner video {
+      max-width: 100%; max-height: 92vh; display: block; border-radius: 8px; background: #000;
+    }
+    .lightbox-close {
+      position: absolute; top: -14px; right: -14px; width: 36px; height: 36px; border-radius: 50%;
+      border: none; background: #fff; cursor: pointer; font-size: 18px; line-height: 1;
+    }
+
+    .thread-head-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+      flex: 0 0 auto;
+      flex-shrink: 0;
+    }
+    .thread-head-actions .icon-btn {
+      color: var(--indigo-deep);
+      background: #f0efff;
+    }
+    .thread-head-actions .icon-btn:hover:not(:disabled) {
+      background: #e4e1ff;
+      color: var(--indigo);
+    }
+    .thread-head-actions .icon-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    #voiceCallBtn {
+      width: 42px;
+      height: 42px;
+      display: inline-flex;
+      visibility: visible;
+    }
+
+    /* ----- Call overlays ----- */
+    .call-overlay {
+      display: none; position: fixed; inset: 0; z-index: 1200;
+      background: linear-gradient(160deg, #1a1635 0%, #2a2158 45%, #0f172a 100%);
+      color: #fff; flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px 20px; text-align: center;
+    }
+    .call-overlay.show { display: flex; }
+    .call-overlay .call-avatar-wrap {
+      width: 120px; height: 120px; border-radius: 50%; margin-bottom: 22px;
+      position: relative;
+    }
+    .call-overlay .call-avatar-wrap .avatar {
+      width: 120px; height: 120px; font-size: 42px; border-radius: 50%;
+    }
+    .call-overlay.ringing .call-avatar-wrap::before,
+    .call-overlay.ringing .call-avatar-wrap::after {
+      content: ''; position: absolute; inset: -8px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.35); animation: callPulse 1.6s ease-out infinite;
+    }
+    .call-overlay.ringing .call-avatar-wrap::after { animation-delay: .5s; }
+    @keyframes callPulse {
+      0% { transform: scale(.92); opacity: .8; }
+      100% { transform: scale(1.35); opacity: 0; }
+    }
+    .call-overlay .call-peer-name { font-size: 26px; font-weight: 750; margin-bottom: 8px; }
+    .call-overlay .call-state-label { font-size: 15px; color: rgba(255,255,255,.72); margin-bottom: 36px; }
+    .call-overlay .call-timer { font-variant-numeric: tabular-nums; font-size: 18px; margin-bottom: 28px; letter-spacing: .04em; }
+    .call-actions { display: flex; gap: 28px; align-items: center; justify-content: center; }
+    .call-action {
+      width: 64px; height: 64px; border-radius: 50%; border: none; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; color: #fff;
+    }
+    .call-action span { display: block; font-size: 11px; margin-top: 8px; color: rgba(255,255,255,.8); }
+    .call-action-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,.75); }
+    .call-action.hangup { background: #e11d48; }
+    .call-action.mute { background: rgba(255,255,255,.16); }
+    .call-action.mute.on { background: #fff; color: #111; }
+    .call-action.cancel { background: #e11d48; }
+
+    .incoming-call {
+      display: none; position: fixed; right: 20px; bottom: 20px; z-index: 1300;
+      width: min(340px, calc(100vw - 32px)); background: #fff; color: var(--ink);
+      border-radius: 18px; box-shadow: 0 18px 50px rgba(15, 23, 42, .28);
+      padding: 18px; animation: slideUp .25s ease;
+    }
+    .incoming-call.show { display: block; }
+    @keyframes slideUp {
+      from { transform: translateY(16px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .incoming-call .ic-row { display: flex; align-items: center; gap: 12px; }
+    .incoming-call .ic-info { flex: 1; min-width: 0; }
+    .incoming-call .ic-name { font-weight: 750; font-size: 16px; }
+    .incoming-call .ic-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .incoming-call .ic-actions { display: flex; gap: 10px; margin-top: 16px; }
+    .incoming-call .ic-btn {
+      flex: 1; border: none; border-radius: 12px; padding: 12px 10px; font-weight: 700;
+      cursor: pointer; font-size: 14px;
+    }
+    .incoming-call .ic-btn.decline { background: #fee2e2; color: #be123c; }
+    .incoming-call .ic-btn.accept { background: #dcfce7; color: #15803d; }
+
+    audio#remoteAudio { display: none; }
+
+    @media (max-width: 900px) {
+      .sidebar {
+        flex-basis: 320px;
+        width: 320px;
+        min-width: 280px;
+      }
+    }
+    /* Phone-sized only: list OR thread (not both). Never leave rail alone. */
+    @media (max-width: 640px) {
+      .sidebar {
+        flex: 1 1 auto;
+        width: auto;
+        min-width: 0;
+        max-width: none;
+      }
+      .main { display: none; }
+      .layout.show-main .sidebar { display: none; }
+      .layout.show-main .main {
+        display: flex;
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .thread-back { display: inline-flex; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout" id="layout">
+    <nav class="rail">
+      <div class="rail-logo">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#fff" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4V6a2 2 0 0 1 2-2z"/></svg>
+      </div>
+      <button class="rail-btn active" data-tab="chats" title="Chats">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4V6a2 2 0 0 1 2-2z"/></svg>
+        <span class="rail-badge" id="rail-unread" style="display:none">0</span>
+      </button>
+      <button class="rail-btn" data-tab="calls" title="Calls">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      </button>
+      <button class="rail-btn" data-tab="groups" title="Groups">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      </button>
+      <button class="rail-btn" data-tab="people" title="People">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </button>
+      <div class="rail-spacer"></div>
+      <button class="rail-btn" data-tab="settings" title="Settings">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </nav>
+
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="avatar-wrap" style="width:38px;height:38px;margin:0">
+          <div class="avatar lg" id="my-avatar" style="width:38px;height:38px;font-size:14px"></div>
+        </div>
+        <span class="brand-name">ChatConnect</span>
+        <button class="icon-btn" id="new-chat" title="New chat">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+        </button>
+        <button class="icon-btn" id="menu-btn" title="Menu">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+        </button>
+      </div>
+
+      <div class="search">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="search" type="text" placeholder="Search conversations..." />
+      </div>
+
+      <div class="online-section" id="online-section">
+        <div class="online-head">
+          <span class="label">ONLINE NOW</span>
+          <button class="see-all" id="see-all">See all</button>
+        </div>
+        <div class="online-row" id="online-row"></div>
+      </div>
+
+      <div class="conv-list" id="conv-list"><div class="empty-hint">Loading…</div></div>
+      <div class="sidebar-panel-title">RECENT CALLS</div>
+      <div class="call-list" id="call-list"><div class="empty-hint">No calls yet.</div></div>
+    </aside>
+
+    <main class="main" id="main">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-logo">
+          <svg viewBox="0 0 24 24" width="46" height="46" aria-hidden="true"><path fill="#fff" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4V6a2 2 0 0 1 2-2z"/></svg>
+        </div>
+        <h2>ChatConnect</h2>
+        <p>Select a chat to start messaging. Your conversations stay in sync in real time across all your open windows.</p>
+      </div>
+
+      <div class="thread" id="thread">
+        <div class="thread-head">
+          <button class="icon-btn thread-back" id="thread-back" title="Back">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div class="avatar-wrap" style="width:40px;height:40px;margin:0">
+            <div class="avatar" id="thread-avatar" style="width:40px;height:40px;font-size:15px"></div>
+          </div>
+          <div class="who">
+            <div class="n" id="thread-name"></div>
+            <div class="s" id="thread-status"></div>
+          </div>
+          <div class="thread-head-actions">
+            <button type="button" class="icon-btn" id="voiceCallBtn" title="Voice call" disabled>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="thread-body" id="thread-body"></div>
+        <div class="upload-bar" id="upload-bar">
+          <span id="upload-label">Uploading…</span>
+          <div class="track"><div class="fill" id="upload-fill"></div></div>
+          <span id="upload-pct">0%</span>
+        </div>
+        <div class="thread-compose">
+          <button type="button" class="attach" id="attachBtn" title="Attach" disabled>
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <input id="fileInput" type="file" hidden accept="image/*,video/mp4,video/quicktime,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.7z,.txt,.csv,.rtf" />
+          <input id="messageInput" type="text" placeholder="Select a chat to type…" autocomplete="off" disabled />
+          <button type="button" id="sendBtn" class="send" title="Send" disabled style="cursor:not-allowed;opacity:.55">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true">
+    <div class="lightbox-inner">
+      <button type="button" class="lightbox-close" id="lightbox-close" title="Close">×</button>
+      <div id="lightbox-content"></div>
+    </div>
+  </div>
+
+  <!-- Outgoing / active voice call overlay -->
+  <div class="call-overlay" id="call-overlay" aria-live="polite">
+    <div class="call-avatar-wrap"><div class="avatar" id="call-avatar"></div></div>
+    <div class="call-peer-name" id="call-peer-name">Contact</div>
+    <div class="call-state-label" id="call-state-label">Calling…</div>
+    <div class="call-timer" id="call-timer" style="display:none">00:00</div>
+    <div class="call-actions" id="call-actions-ringing">
+      <div class="call-action-wrap">
+        <button type="button" class="call-action cancel" id="call-cancel-btn" title="Cancel">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        Cancel
+      </div>
+    </div>
+    <div class="call-actions" id="call-actions-active" style="display:none">
+      <div class="call-action-wrap">
+        <button type="button" class="call-action mute" id="call-mute-btn" title="Mute">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+        Mute
+      </div>
+      <div class="call-action-wrap">
+        <button type="button" class="call-action hangup" id="call-hangup-btn" title="Hang up">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 24 20.31v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 5.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+        End
+      </div>
+    </div>
+  </div>
+
+  <!-- Incoming call popup -->
+  <div class="incoming-call" id="incoming-call" role="dialog" aria-modal="true">
+    <div class="ic-row">
+      <div class="avatar-wrap" style="width:48px;height:48px;margin:0">
+        <div class="avatar" id="incoming-avatar" style="width:48px;height:48px;font-size:17px"></div>
+      </div>
+      <div class="ic-info">
+        <div class="ic-name" id="incoming-name">Caller</div>
+        <div class="ic-sub" id="incoming-sub">Incoming voice call…</div>
+      </div>
+    </div>
+    <div class="ic-actions">
+      <button type="button" class="ic-btn decline" id="incoming-decline">Decline</button>
+      <button type="button" class="ic-btn accept" id="incoming-accept">Accept</button>
+    </div>
+  </div>
+  <audio id="remoteAudio" autoplay playsinline></audio>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // ----- session helpers (inline so this page is self-contained) -----
+    function getToken() { return localStorage.getItem('token') || sessionStorage.getItem('token'); }
+    function clearSession() { for (const s of [localStorage, sessionStorage]) { s.removeItem('token'); s.removeItem('user'); } }
+    const token = getToken();
+    if (!token) location.href = '/';
+
+    async function apiGet(path) {
+      const res = await fetch(path, { headers: { Authorization: 'Bearer ' + token } });
+      if (res.status === 401) { clearSession(); location.href = '/'; throw new Error('unauth'); }
+      return res.json();
+    }
+    async function apiPost(path, body) {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify(body),
+      });
+      return { status: res.status, data: await res.json().catch(() => ({})) };
+    }
+
+    // ----- avatar / time helpers -----
+    const AVATAR_COLORS = [
+      ['#f59e0b', '#ef4444'], ['#10b981', '#3b82f6'], ['#8b5cf6', '#ec4899'],
+      ['#6d5efc', '#4f46e5'], ['#06b6d4', '#3b82f6'], ['#f97316', '#f43f5e'],
+    ];
+    function colorFor(str) {
+      let h = 0; for (let i = 0; i < (str || '').length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+      return AVATAR_COLORS[h % AVATAR_COLORS.length];
+    }
+    function initials(name) {
+      const p = (name || '?').trim().split(/\s+/);
+      return ((p[0]?.[0] || '') + (p[1]?.[0] || '')).toUpperCase() || '?';
+    }
+    function paintAvatar(el, person) {
+      const name = person.name || person.display_name || '';
+      const avatarUrl = person.avatar || person.avatar_url || null;
+      if (avatarUrl) {
+        el.style.backgroundImage = `url("${avatarUrl}")`;
+        el.style.backgroundSize = 'cover';
+        el.style.backgroundPosition = 'center';
+        el.textContent = '';
+      } else {
+        el.style.backgroundImage = '';
+        const [a, b] = colorFor(person.email || name);
+        el.style.background = `linear-gradient(135deg, ${a}, ${b})`;
+        el.textContent = initials(name);
+      }
+    }
+    function avatarNode(person, cls) {
+      const el = document.createElement('div');
+      el.className = 'avatar' + (cls ? ' ' + cls : '');
+      paintAvatar(el, person);
+      return el;
+    }
+    function parseDate(s) { return !s ? null : (/[TZ]/.test(s) ? new Date(s) : new Date(s.replace(' ', 'T') + 'Z')); }
+    function timestampMs(s) {
+      const d = parseDate(s);
+      return d && !Number.isNaN(d.getTime()) ? d.getTime() : 0;
+    }
+    function compareTimelineItems(a, b) {
+      const dt = timestampMs(a && a.created_at) - timestampMs(b && b.created_at);
+      if (dt !== 0) return dt;
+      return Number(a && a.id) - Number(b && b.id);
+    }
+    function dayKey(s) {
+      const d = parseDate(s);
+      if (!d || Number.isNaN(d.getTime())) return '';
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function daySeparatorLabel(s) {
+      const d = parseDate(s);
+      if (!d) return '';
+      const now = new Date();
+      const sod = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+      const days = Math.round((sod(now) - sod(d)) / 86400000);
+      if (days === 0) return 'Today';
+      if (days === 1) return 'Yesterday';
+      if (days < 7) return d.toLocaleDateString([], { weekday: 'long' });
+      return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+    function timeLabel(s) {
+      const d = parseDate(s); if (!d) return '';
+      const now = new Date();
+      const sod = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+      const days = Math.round((sod(now) - sod(d)) / 86400000);
+      if (days === 0) return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      if (days === 1) return 'Yesterday';
+      if (days < 7) return d.toLocaleDateString([], { weekday: 'short' });
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+    function bubbleTime(s) {
+      const d = parseDate(s); if (!d) return '';
+      return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+
+    // ----- state -----
+    let me = null;
+    let contacts = [];
+    let conversations = [];
+    let callHistory = [];
+    let filter = '';
+    let currentContactId = null; // numeric user id of the open chat
+    let activeRailTab = 'chats';
+    const renderedMessageIds = new Set();
+
+    const layout = document.getElementById('layout');
+    const mainEl = document.getElementById('main');
+    const threadEl = document.getElementById('thread');
+    const emptyEl = document.getElementById('empty-state');
+    const threadBody = document.getElementById('thread-body');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const attachBtn = document.getElementById('attachBtn');
+    const fileInput = document.getElementById('fileInput');
+    const voiceCallBtn = document.getElementById('voiceCallBtn');
+    const uploadBar = document.getElementById('upload-bar');
+    const uploadFill = document.getElementById('upload-fill');
+    const uploadPct = document.getElementById('upload-pct');
+    const uploadLabel = document.getElementById('upload-label');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxContent = document.getElementById('lightbox-content');
+
+    // Create the socket early so selectConversation / sendMessage can use it.
+    const socket = io({ auth: { token } });
+    socket.on('connect_error', (err) => {
+      console.error('[socket] connect_error', err && err.message);
+      // Bad/expired JWT — force re-login instead of a silent dead UI.
+      if (/auth/i.test(String(err && err.message)) || /Not authenticated/i.test(String(err && err.message))) {
+        clearSession();
+        location.href = '/';
+      }
+    });
+
+    function sameId(a, b) {
+      return Number(a) === Number(b);
+    }
+
+    // Logged-in user id for bubble alignment (me may lag on first paint).
+    function getMyId() {
+      if (me && me.id != null) return Number(me.id);
+      try {
+        const payload = JSON.parse(atob(String(token).split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        if (payload && payload.id != null) return Number(payload.id);
+      } catch (_) { /* ignore */ }
+      return null;
+    }
+
+    function isMine(message) {
+      const myId = getMyId();
+      if (myId == null || !message) return false;
+      return sameId(message.sender_id, myId);
+    }
+
+    function personById(id) {
+      const n = Number(id);
+      return conversations.find((c) => sameId(c.id, n))
+        || contacts.find((c) => sameId(c.id, n))
+        || null;
+    }
+
+    function enableComposer() {
+      if (!messageInput || !sendBtn || !attachBtn || !voiceCallBtn) return;
+      messageInput.removeAttribute('disabled');
+      sendBtn.removeAttribute('disabled');
+      attachBtn.removeAttribute('disabled');
+      voiceCallBtn.removeAttribute('disabled');
+      messageInput.placeholder = 'Type a message...';
+      messageInput.disabled = false;
+      sendBtn.disabled = false;
+      attachBtn.disabled = false;
+      voiceCallBtn.disabled = false;
+      voiceCallBtn.style.display = 'inline-flex';
+      voiceCallBtn.style.visibility = 'visible';
+      sendBtn.style.cursor = 'pointer';
+      sendBtn.style.opacity = '1';
+    }
+
+    function showThreadPanel() {
+      mainEl.classList.add('has-thread');
+      threadEl.classList.add('show');
+      layout.classList.add('show-main');
+      emptyEl.style.display = 'none';
+      // Do not set inline display — CSS .thread.show uses grid to pin the compose bar.
+      threadEl.style.removeProperty('display');
+      enableComposer();
+    }
+
+    function hideThreadPanel() {
+      mainEl.classList.remove('has-thread');
+      threadEl.classList.remove('show');
+      layout.classList.remove('show-main');
+      emptyEl.style.display = '';
+      threadEl.style.removeProperty('display');
+      currentContactId = null;
+      messageInput.disabled = true;
+      sendBtn.disabled = true;
+      attachBtn.disabled = true;
+      voiceCallBtn.disabled = true;
+      messageInput.placeholder = 'Select a chat to type…';
+      sendBtn.style.cursor = 'not-allowed';
+      sendBtn.style.opacity = '.55';
+    }
+
+    function ensureComposerVisible() {
+      enableComposer();
+      const compose = document.querySelector('.thread-compose');
+      if (compose) {
+        compose.style.display = 'flex';
+        compose.style.visibility = 'visible';
+      }
+      // Keep the message list scrolled; never scroll the whole thread (that hid the bar).
+      if (threadBody) threadBody.scrollTop = threadBody.scrollHeight;
+    }
+
+    function belongsToOpenChat(message) {
+      if (currentContactId == null || getMyId() == null) return false;
+      const partnerId = conversationPartnerId(message);
+      return partnerId != null && sameId(partnerId, currentContactId);
+    }
+
+    // The other party in this 1:1 message relative to the logged-in user.
+    function conversationPartnerId(message) {
+      const myId = getMyId();
+      if (myId == null || !message) return null;
+      if (sameId(message.sender_id, myId)) return Number(message.receiver_id);
+      if (sameId(message.receiver_id, myId)) return Number(message.sender_id);
+      return null;
+    }
+
+    // Normalize any socket/REST payload into one shape (snake_case).
+    function normalizeMessage(raw) {
+      if (!raw) return null;
+      return {
+        id: raw.id,
+        sender_id: raw.sender_id ?? raw.senderId,
+        receiver_id: raw.receiver_id ?? raw.receiverId,
+        text: raw.text == null ? '' : String(raw.text),
+        status: raw.status || 'sent',
+        message_type: raw.message_type || raw.messageType || 'text',
+        file_url: raw.file_url || raw.fileUrl || null,
+        thumbnail_url: raw.thumbnail_url || raw.thumbnailUrl || null,
+        file_name: raw.file_name || raw.fileName || null,
+        file_size: raw.file_size != null ? Number(raw.file_size)
+          : (raw.fileSize != null ? Number(raw.fileSize) : null),
+        created_at: raw.created_at || raw.createdAt,
+      };
+    }
+
+    // WhatsApp-style ticks: ✓ sent | ✓✓ delivered (grey) | ✓✓ read (blue)
+    function paintTicks(ticksEl, status) {
+      if (!ticksEl) return;
+      ticksEl.textContent = status === 'sent' ? '✓' : '✓✓';
+      ticksEl.classList.toggle('read', status === 'read');
+    }
+
+    function applyMessageStatus(id, status) {
+      const el = threadBody.querySelector('.msg[data-id="' + id + '"]');
+      if (!el) return;
+      paintTicks(el.querySelector('.msg-ticks'), status);
+    }
+
+    function formatBytes(n) {
+      const b = Number(n) || 0;
+      if (b < 1024) return b + ' B';
+      if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+      return (b / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function fileExtLabel(name) {
+      const ext = ((name || '').split('.').pop() || 'FILE').toUpperCase();
+      return ext.slice(0, 4);
+    }
+
+    // Sidebar / search preview for ANY conversation's last message.
+    function formatCallDurationLabel(sec) {
+      const s = Math.max(0, Number(sec) || 0);
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return m + ':' + String(r).padStart(2, '0');
+    }
+
+    function callEventLabel(message) {
+      const m = normalizeMessage(message) || {};
+      const kind = (m.file_name === 'video') ? 'video' : 'voice';
+      const kindLabel = kind === 'video' ? 'Video call' : 'Voice call';
+      const status = (m.text || '').trim();
+      if (status === 'missed') return '📞 Missed ' + kind + ' call';
+      if (status === 'declined') return '📞 ' + kindLabel + ' declined';
+      if (status === 'answered') {
+        const dur = m.file_size != null ? (' · ' + formatCallDurationLabel(m.file_size)) : '';
+        return '📞 ' + kindLabel + dur;
+      }
+      return '📞 ' + kindLabel;
+    }
+
+    function previewText(message) {
+      const m = normalizeMessage(message) || {};
+      const type = m.message_type || 'text';
+      const caption = (m.text || '').trim();
+      if (type === 'call') return callEventLabel(m);
+      if (type === 'image') return caption ? ('📷 ' + caption) : '📷 Photo';
+      if (type === 'video') return caption ? ('🎬 ' + caption) : '🎬 Video';
+      if (type === 'file') return '📎 ' + (m.file_name || 'document');
+      return m.text || '';
+    }
+
+    function openLightbox(kind, src) {
+      lightboxContent.innerHTML = '';
+      if (kind === 'video') {
+        const v = document.createElement('video');
+        v.src = src;
+        v.controls = true;
+        v.autoplay = true;
+        lightboxContent.appendChild(v);
+      } else {
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = '';
+        lightboxContent.appendChild(img);
+      }
+      lightbox.classList.add('show');
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('show');
+      lightboxContent.innerHTML = '';
+    }
+
+    /**
+     * SINGLE unified bubble renderer for sent AND received messages.
+     * Used by: history load (GET /api/messages) and socket "message:new".
+     * Branches only on message_type — never on "mine vs theirs" for media body.
+     * Alignment (left/right) is the only sender-based difference.
+     * Returns the created element (or null) so callers can place it chronologically.
+     */
+    function appendBubble(rawMessage, opts) {
+      const message = normalizeMessage(rawMessage);
+      if (!message || message.id == null) return null;
+
+      if (renderedMessageIds.has(message.id)) {
+        applyMessageStatus(message.id, message.status);
+        return threadBody.querySelector('.msg[data-id="' + message.id + '"]');
+      }
+      renderedMessageIds.add(message.id);
+
+      const mine = isMine(message);
+      const type = message.message_type || 'text';
+      const el = document.createElement('div');
+      el.dataset.id = String(message.id);
+      el.dataset.senderId = String(message.sender_id);
+      el.dataset.createdAt = String(message.created_at || '');
+      el.dataset.ts = String(timestampMs(message.created_at));
+
+      // Call events are centered system lines (not left/right chat bubbles).
+      if (type === 'call') {
+        const missed = (message.text || '').trim() === 'missed';
+        el.className = 'msg call-event' + (missed ? ' missed' : '');
+        const label = document.createElement('div');
+        label.className = 'call-event-label';
+        label.textContent = callEventLabel(message);
+        el.appendChild(label);
+        const meta = document.createElement('div');
+        meta.className = 'msg-meta';
+        const time = document.createElement('span');
+        time.textContent = bubbleTime(message.created_at);
+        meta.appendChild(time);
+        el.appendChild(meta);
+      } else {
+        // Text / image / video / file — always mine → right, theirs → left.
+        el.className = 'msg ' + (mine ? 'mine' : 'theirs');
+
+        const fileUrl = message.file_url;
+        const thumb = message.thumbnail_url || fileUrl;
+        const caption = (message.text || '').trim();
+
+        if (type === 'image' && fileUrl) {
+          const wrap = document.createElement('div');
+          wrap.className = 'msg-media';
+          const img = document.createElement('img');
+          img.src = thumb;
+          img.alt = message.file_name || 'Photo';
+          img.loading = 'lazy';
+          wrap.appendChild(img);
+          wrap.addEventListener('click', () => openLightbox('image', fileUrl));
+          el.appendChild(wrap);
+          if (caption) {
+            const cap = document.createElement('div');
+            cap.className = 'msg-text msg-caption';
+            cap.textContent = caption;
+            el.appendChild(cap);
+          }
+        } else if (type === 'video' && fileUrl) {
+          const wrap = document.createElement('div');
+          wrap.className = 'msg-media';
+          const vid = document.createElement('video');
+          vid.src = fileUrl;
+          vid.muted = true;
+          vid.preload = 'metadata';
+          vid.playsInline = true;
+          wrap.appendChild(vid);
+          const overlay = document.createElement('div');
+          overlay.className = 'play-overlay';
+          overlay.innerHTML = '<span>▶</span>';
+          wrap.appendChild(overlay);
+          wrap.addEventListener('click', () => openLightbox('video', fileUrl));
+          el.appendChild(wrap);
+          if (caption) {
+            const cap = document.createElement('div');
+            cap.className = 'msg-text msg-caption';
+            cap.textContent = caption;
+            el.appendChild(cap);
+          }
+        } else if (type === 'file' && fileUrl) {
+          const a = document.createElement('a');
+          a.className = 'msg-file';
+          a.href = fileUrl;
+          a.download = message.file_name || 'download';
+          a.target = '_blank';
+          a.rel = 'noopener';
+          const icon = document.createElement('div');
+          icon.className = 'msg-file-icon';
+          icon.textContent = fileExtLabel(message.file_name);
+          const fmeta = document.createElement('div');
+          fmeta.className = 'msg-file-meta';
+          const name = document.createElement('div');
+          name.className = 'msg-file-name';
+          name.textContent = message.file_name || 'Document';
+          const size = document.createElement('div');
+          size.className = 'msg-file-size';
+          size.textContent = formatBytes(message.file_size) + ' · tap to download';
+          fmeta.appendChild(name);
+          fmeta.appendChild(size);
+          a.appendChild(icon);
+          a.appendChild(fmeta);
+          el.appendChild(a);
+          if (caption) {
+            const cap = document.createElement('div');
+            cap.className = 'msg-text msg-caption';
+            cap.textContent = caption;
+            el.appendChild(cap);
+          }
+        } else {
+          const text = document.createElement('div');
+          text.className = 'msg-text';
+          text.textContent = message.text || (type !== 'text' ? ('[' + type + ']') : '');
+          el.appendChild(text);
+        }
+
+        const meta = document.createElement('div');
+        meta.className = 'msg-meta';
+        const time = document.createElement('span');
+        time.textContent = bubbleTime(message.created_at);
+        meta.appendChild(time);
+        if (mine) {
+          const ticks = document.createElement('span');
+          ticks.className = 'msg-ticks';
+          paintTicks(ticks, message.status || 'sent');
+          meta.appendChild(ticks);
+        }
+        el.appendChild(meta);
+      }
+
+      const before = opts && opts.beforeNode;
+      if (before && before.parentNode === threadBody) {
+        threadBody.insertBefore(el, before);
+      } else {
+        threadBody.appendChild(el);
+      }
+      if (!opts || opts.scroll !== false) {
+        threadBody.scrollTop = threadBody.scrollHeight;
+      }
+      return el;
+    }
+
+    function ensureDaySeparator(createdAt, beforeNode) {
+      const key = dayKey(createdAt);
+      if (!key) return;
+      const existing = threadBody.querySelector('.thread-day[data-day="' + key + '"]');
+      if (existing) return existing;
+      const sep = document.createElement('div');
+      sep.className = 'thread-day';
+      sep.dataset.day = key;
+      sep.textContent = daySeparatorLabel(createdAt);
+      if (beforeNode && beforeNode.parentNode === threadBody) {
+        threadBody.insertBefore(sep, beforeNode);
+      } else {
+        threadBody.appendChild(sep);
+      }
+      return sep;
+    }
+
+    function findInsertBeforeNode(message) {
+      const ts = timestampMs(message.created_at);
+      const id = Number(message.id);
+      const nodes = threadBody.querySelectorAll('.msg');
+      for (const node of nodes) {
+        const nTs = Number(node.dataset.ts) || 0;
+        const nId = Number(node.dataset.id);
+        if (nTs > ts || (nTs === ts && nId > id)) return node;
+      }
+      return null;
+    }
+
+    function insertTimelineItem(rawMessage) {
+      const message = normalizeMessage(rawMessage);
+      if (!message || message.id == null) return null;
+      if (renderedMessageIds.has(message.id)) {
+        applyMessageStatus(message.id, message.status);
+        return threadBody.querySelector('.msg[data-id="' + message.id + '"]');
+      }
+      const before = findInsertBeforeNode(message);
+      ensureDaySeparator(message.created_at, before);
+      return appendBubble(message, { beforeNode: before, scroll: true });
+    }
+
+    function renderMessageHistory(messages) {
+      threadBody.innerHTML = '';
+      renderedMessageIds.clear();
+      // Skip deleted/bogus call pills (e.g. old test call:99999) if any slip through.
+      const list = (messages || [])
+        .filter((raw) => {
+          const m = normalizeMessage(raw);
+          if (!m) return false;
+          if (m.message_type !== 'call') return true;
+          const url = m.file_url != null ? String(m.file_url) : '';
+          if (!url.startsWith('call:')) return false;
+          const cid = Number(url.slice(5));
+          return Number.isFinite(cid) && cid > 0 && cid < 90000;
+        })
+        .slice()
+        .sort(compareTimelineItems);
+      if (!list.length) {
+        threadBody.innerHTML = '<div class="empty-hint">No messages yet. Say hello!</div>';
+        return;
+      }
+      let prevDay = null;
+      list.forEach((raw) => {
+        const m = normalizeMessage(raw);
+        if (!m) return;
+        const day = dayKey(m.created_at);
+        if (day && day !== prevDay) {
+          ensureDaySeparator(m.created_at, null);
+          prevDay = day;
+        }
+        appendBubble(m, { scroll: false });
+      });
+      threadBody.scrollTop = threadBody.scrollHeight;
+    }
+
+    function upsertSidebarConversation(rawMessage) {
+      const myId = getMyId();
+      if (myId == null) return;
+      const message = normalizeMessage(rawMessage);
+      if (!message) return;
+      const otherId = conversationPartnerId(message);
+      if (otherId == null) return;
+
+      let conv = conversations.find((c) => sameId(c.id, otherId));
+      if (!conv) {
+        const person = personById(otherId) || {
+          id: otherId,
+          display_name: 'User ' + otherId,
+          name: 'User ' + otherId,
+        };
+        conv = {
+          id: otherId,
+          name: person.name || person.display_name,
+          display_name: person.display_name || person.name,
+          email: person.email,
+          avatar: person.avatar || person.avatar_url,
+          online: !!person.online,
+          unread: 0,
+          last_message: {},
+        };
+      }
+      conv.last_message = {
+        text: message.text,
+        created_at: message.created_at,
+        from_me: sameId(message.sender_id, myId),
+        status: message.status,
+        message_type: message.message_type || 'text',
+        file_name: message.file_name || null,
+      };
+      // Incoming message for a chat that isn't open → bump unread locally.
+      if (!sameId(message.sender_id, myId) && !sameId(otherId, currentContactId)) {
+        conv.unread = (conv.unread || 0) + 1;
+      }
+      if (sameId(otherId, currentContactId)) {
+        conv.unread = 0;
+      }
+      conversations = [conv, ...conversations.filter((c) => !sameId(c.id, otherId))];
+      renderConversations();
+    }
+
+    // Click handler for sidebar conversations / Online Now / People opens.
+    async function selectConversation(rawId) {
+      const id = Number(rawId);
+      if (!Number.isFinite(id)) {
+        console.warn('[chat] selectConversation: bad id', rawId);
+        return;
+      }
+
+      currentContactId = id;
+
+      let p = personById(id);
+      if (!p) {
+        p = { id, display_name: 'Contact ' + id, name: 'Contact ' + id, online: false };
+      }
+
+      // Show thread + enable composer immediately so the user can type.
+      showThreadPanel();
+      paintAvatar(document.getElementById('thread-avatar'), p);
+      document.getElementById('thread-name').textContent = p.name || p.display_name;
+      document.getElementById('thread-status').textContent =
+        p.online ? 'online' : (p.last_seen ? 'last seen ' + timeLabel(p.last_seen) : 'offline');
+
+      // Mark unread messages from this contact as read → triggers messages:read for them.
+      socket.emit('chat:open', { contactId: id });
+
+      const conv = conversations.find((c) => sameId(c.id, id));
+      if (conv) conv.unread = 0;
+      renderConversations();
+
+      threadBody.innerHTML = '<div class="empty-hint">Loading messages…</div>';
+      renderedMessageIds.clear();
+      try {
+        const data = await apiGet('/api/messages/' + id + '?_=' + Date.now());
+        renderMessageHistory(data.messages || []);
+        enableComposer();
+        messageInput.focus();
+        // Refresh sidebar so a deleted call can't linger as the preview.
+        await loadAll();
+      } catch (err) {
+        console.error('[chat] failed to load messages', err);
+        threadBody.innerHTML = '<div class="empty-hint">Could not load messages.</div>';
+      }
+    }
+
+    function sendMessage() {
+      if (currentContactId == null) {
+        console.warn('[chat] sendMessage: no conversation open');
+        return;
+      }
+      const text = messageInput.value.trim();
+      if (!text) return;
+      socket.emit('message:send', { receiverId: currentContactId, text, messageType: 'text' });
+      messageInput.value = '';
+      messageInput.focus();
+    }
+
+    function setUploadProgress(show, pct, label) {
+      uploadBar.classList.toggle('show', !!show);
+      const p = Math.max(0, Math.min(100, Math.round(pct || 0)));
+      uploadFill.style.width = p + '%';
+      uploadPct.textContent = p + '%';
+      if (label) uploadLabel.textContent = label;
+    }
+
+    function uploadFile(file) {
+      return new Promise((resolve, reject) => {
+        const fd = new FormData();
+        fd.append('file', file);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/upload');
+        xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+        xhr.upload.onprogress = (e) => {
+          if (!e.lengthComputable) return;
+          setUploadProgress(true, (e.loaded / e.total) * 100, 'Uploading ' + file.name);
+        };
+        xhr.onload = () => {
+          let data = {};
+          try { data = JSON.parse(xhr.responseText); } catch (_) {}
+          if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+          else reject(new Error(data.error || ('Upload failed (' + xhr.status + ')')));
+        };
+        xhr.onerror = () => reject(new Error('Network error during upload'));
+        setUploadProgress(true, 0, 'Uploading ' + file.name);
+        xhr.send(fd);
+      });
+    }
+
+    async function sendMediaFile(file) {
+      if (currentContactId == null) return;
+      const caption = messageInput.value.trim();
+      attachBtn.disabled = true;
+      sendBtn.disabled = true;
+      try {
+        const uploaded = await uploadFile(file);
+        setUploadProgress(true, 100, 'Sending…');
+        socket.emit('message:send', {
+          receiverId: currentContactId,
+          text: caption,
+          messageType: uploaded.fileType,
+          fileUrl: uploaded.url,
+          thumbnailUrl: uploaded.thumbnailUrl,
+          fileName: uploaded.originalName,
+          fileSize: uploaded.sizeInBytes,
+        });
+        messageInput.value = '';
+      } catch (err) {
+        alert(err.message || 'Upload failed');
+      } finally {
+        setUploadProgress(false, 0);
+        enableComposer();
+        messageInput.focus();
+      }
+    }
+
+    function renderOnline() {
+      const row = document.getElementById('online-row');
+      row.innerHTML = '';
+      const online = contacts.filter((c) => c.online);
+      if (online.length === 0) {
+        row.innerHTML = '<div class="empty-hint" style="padding:2px 0 6px">No one online right now.</div>';
+        return;
+      }
+      online.forEach((c) => {
+        const item = document.createElement('div');
+        item.className = 'online-item';
+        item.dataset.contactId = String(c.id);
+        const wrap = document.createElement('div'); wrap.className = 'avatar-wrap';
+        wrap.appendChild(avatarNode(c));
+        const dot = document.createElement('span'); dot.className = 'online-dot'; wrap.appendChild(dot);
+        const name = document.createElement('div'); name.className = 'online-name'; name.textContent = c.display_name;
+        item.appendChild(wrap); item.appendChild(name);
+        row.appendChild(item);
+      });
+    }
+
+    function renderConversations() {
+      const list = document.getElementById('conv-list');
+      const q = filter.trim().toLowerCase();
+      const rows = conversations.filter((c) => {
+        const name = (c.name || c.display_name || '').toLowerCase();
+        const text = previewText(c.last_message || {}).toLowerCase();
+        return !q || name.includes(q) || text.includes(q);
+      });
+      list.innerHTML = '';
+      if (rows.length === 0) {
+        list.innerHTML = '<div class="empty-hint">' +
+          (conversations.length === 0
+            ? 'No conversations yet. Use the pencil or the People icon to add someone by email.'
+            : 'No matches.') +
+          '</div>';
+        return;
+      }
+      let totalUnread = 0;
+      rows.forEach((c) => {
+        totalUnread += c.unread || 0;
+        const row = document.createElement('div');
+        row.className = 'conv' + (sameId(c.id, currentContactId) ? ' active' : '');
+        row.dataset.contactId = String(c.id);
+
+        const aw = document.createElement('div'); aw.className = 'conv-avatar-wrap';
+        aw.appendChild(avatarNode(c));
+        if (c.online) {
+          const d = document.createElement('span');
+          d.className = 'online-dot';
+          aw.appendChild(d);
+        }
+
+        const main = document.createElement('div'); main.className = 'conv-main';
+        const top = document.createElement('div'); top.className = 'conv-top';
+        const name = document.createElement('span');
+        name.className = 'conv-name';
+        name.textContent = c.name || c.display_name;
+        const time = document.createElement('span');
+        time.className = 'conv-time' + (c.unread > 0 ? ' unread' : '');
+        time.textContent = c.last_message ? timeLabel(c.last_message.created_at) : '';
+        top.appendChild(name); top.appendChild(time);
+
+        const bottom = document.createElement('div'); bottom.className = 'conv-bottom';
+        const prev = document.createElement('span');
+        prev.className = 'conv-preview' + (c.unread > 0 ? ' unread' : '');
+        prev.textContent = c.last_message
+          ? ((c.last_message.from_me ? 'You: ' : '') + previewText(c.last_message))
+          : '';
+        bottom.appendChild(prev);
+        if (c.unread > 0) {
+          const b = document.createElement('span');
+          b.className = 'conv-badge';
+          b.textContent = c.unread > 99 ? '99+' : c.unread;
+          bottom.appendChild(b);
+        }
+
+        main.appendChild(top); main.appendChild(bottom);
+        row.appendChild(aw); row.appendChild(main);
+        list.appendChild(row);
+      });
+
+      const railBadge = document.getElementById('rail-unread');
+      if (totalUnread > 0) {
+        railBadge.style.display = 'flex';
+        railBadge.textContent = totalUnread > 99 ? '99+' : totalUnread;
+      } else {
+        railBadge.style.display = 'none';
+      }
+    }
+
+    function formatCallDuration(sec) {
+      const s = Math.max(0, Number(sec) || 0);
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      if (m >= 60) {
+        const h = Math.floor(m / 60);
+        return h + 'h ' + (m % 60) + 'm';
+      }
+      if (m > 0) return m + 'm ' + String(r).padStart(2, '0') + 's';
+      return s + 's';
+    }
+
+    function callTypeIcon(callType, missed) {
+      const stroke = missed ? '#e11d48' : 'currentColor';
+      if (callType === 'video') {
+        return '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="' + stroke + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>';
+      }
+      return '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="' + stroke + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+    }
+
+    function callStatusLabel(call) {
+      const missed = call.status === 'missed';
+      const dir = call.direction === 'outgoing' ? 'Outgoing' : 'Incoming';
+      if (call.status === 'missed') return (call.direction === 'outgoing' ? 'Outgoing' : 'Missed') + ' · ' + (call.call_type === 'video' ? 'Video' : 'Voice');
+      if (call.status === 'declined') return 'Declined · ' + (call.call_type === 'video' ? 'Video' : 'Voice');
+      const dur = call.duration_seconds != null ? (' · ' + formatCallDuration(call.duration_seconds)) : '';
+      return dir + ' · ' + (call.call_type === 'video' ? 'Video' : 'Voice') + dur;
+    }
+
+    function renderCallHistory() {
+      const list = document.getElementById('call-list');
+      list.innerHTML = '';
+      if (!callHistory.length) {
+        list.innerHTML = '<div class="empty-hint">No calls yet. Open a chat and tap the phone icon to start a voice call.</div>';
+        return;
+      }
+      callHistory.forEach((call) => {
+        const missed = call.status === 'missed';
+        const other = call.other || {};
+        const row = document.createElement('div');
+        row.className = 'call-row';
+        row.dataset.contactId = String(other.id);
+
+        const aw = document.createElement('div');
+        aw.className = 'conv-avatar-wrap';
+        aw.appendChild(avatarNode({
+          id: other.id,
+          name: other.name || other.display_name,
+          display_name: other.display_name || other.name,
+          email: other.email,
+          avatar: other.avatar,
+        }));
+
+        const main = document.createElement('div');
+        main.className = 'call-main';
+        const top = document.createElement('div');
+        top.className = 'call-top';
+        const name = document.createElement('span');
+        name.className = 'call-name' + (missed ? ' missed' : '');
+        name.textContent = other.name || other.display_name || 'Unknown';
+        const time = document.createElement('span');
+        time.className = 'call-time';
+        time.textContent = timeLabel(call.started_at);
+        top.appendChild(name);
+        top.appendChild(time);
+
+        const meta = document.createElement('div');
+        meta.className = 'call-meta' + (missed ? ' missed' : '');
+        meta.innerHTML = callTypeIcon(call.call_type, missed)
+          + '<span class="call-dir">' + callStatusLabel(call) + '</span>';
+
+        main.appendChild(top);
+        main.appendChild(meta);
+        row.appendChild(aw);
+        row.appendChild(main);
+        list.appendChild(row);
+      });
+    }
+
+    function setRailTab(tab) {
+      activeRailTab = tab;
+      document.querySelectorAll('.rail-btn').forEach((b) => {
+        b.classList.toggle('active', b.dataset.tab === tab);
+      });
+      const sidebar = document.querySelector('.sidebar');
+      if (tab === 'calls') {
+        sidebar.classList.add('show-calls');
+        loadCallHistory();
+      } else {
+        sidebar.classList.remove('show-calls');
+      }
+    }
+
+    async function loadCallHistory() {
+      try {
+        const data = await apiGet('/api/calls');
+        callHistory = data.calls || [];
+        renderCallHistory();
+      } catch (err) {
+        console.error('[chat] failed to load calls', err);
+        document.getElementById('call-list').innerHTML =
+          '<div class="empty-hint">Could not load call history.</div>';
+      }
+    }
+
+    async function loadAll() {
+      const [cRes, convRes] = await Promise.all([
+        apiGet('/api/contacts'),
+        apiGet('/api/conversations'),
+      ]);
+      contacts = cRes.contacts || [];
+      conversations = convRes.conversations || [];
+      renderOnline();
+      renderConversations();
+      if (activeRailTab === 'calls') loadCallHistory();
+      if (currentContactId != null) {
+        const p = personById(currentContactId);
+        if (p) {
+          document.getElementById('thread-status').textContent =
+            p.online ? 'online' : (p.last_seen ? 'last seen ' + timeLabel(p.last_seen) : 'offline');
+        }
+      }
+    }
+
+    async function loadMe() {
+      const { user } = await apiGet('/api/me');
+      me = user;
+      paintAvatar(document.getElementById('my-avatar'), user);
+    }
+
+    async function addContactPrompt() {
+      const email = prompt('Add a contact by email:');
+      if (!email) return;
+      const r = await apiPost('/api/contacts', { email: email.trim() });
+      if (r.status >= 400) {
+        alert(r.data.error || 'Could not add contact');
+      } else {
+        await loadAll();
+        const added = contacts.find(
+          (c) => c.email && c.email.toLowerCase() === email.trim().toLowerCase()
+        );
+        if (added) selectConversation(added.id);
+      }
+    }
+
+    // ----- UI events -----
+    // Event delegation so clicks still work after list re-renders.
+    document.getElementById('conv-list').addEventListener('click', (e) => {
+      const row = e.target.closest('[data-contact-id]');
+      if (!row) return;
+      selectConversation(row.dataset.contactId);
+    });
+    document.getElementById('online-row').addEventListener('click', (e) => {
+      const item = e.target.closest('[data-contact-id]');
+      if (!item) return;
+      selectConversation(item.dataset.contactId);
+    });
+
+    document.getElementById('search').addEventListener('input', (e) => {
+      filter = e.target.value;
+      renderConversations();
+    });
+    document.getElementById('see-all').addEventListener('click', () => {
+      document.getElementById('online-section').classList.toggle('collapsed');
+      document.getElementById('see-all').textContent =
+        document.getElementById('online-section').classList.contains('collapsed') ? 'Show' : 'See all';
+    });
+    document.getElementById('new-chat').addEventListener('click', addContactPrompt);
+    document.getElementById('menu-btn').addEventListener('click', () => {
+      if (confirm('Log out?')) { clearSession(); location.href = '/'; }
+    });
+    document.getElementById('thread-back').addEventListener('click', () => {
+      socket.emit('chat:open', { contactId: null });
+      hideThreadPanel();
+      renderConversations();
+    });
+
+    document.getElementById('call-list').addEventListener('click', (e) => {
+      const row = e.target.closest('[data-contact-id]');
+      if (!row) return;
+      setRailTab('chats');
+      selectConversation(row.dataset.contactId);
+    });
+
+    document.querySelectorAll('.rail-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        if (tab === 'people') { addContactPrompt(); return; }
+        if (tab === 'chats' || tab === 'calls') {
+          setRailTab(tab);
+          return;
+        }
+        alert(tab[0].toUpperCase() + tab.slice(1) + ' is coming soon.');
+      });
+    });
+
+    sendBtn.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+    attachBtn.addEventListener('click', () => {
+      if (currentContactId == null || attachBtn.disabled) return;
+      fileInput.click();
+    });
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files && fileInput.files[0];
+      fileInput.value = '';
+      if (file) sendMediaFile(file);
+    });
+    document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeLightbox();
+    });
+
+    // =====================================================================
+    // Phase B — 1:1 voice calling (WebRTC audio + Socket.IO signaling only)
+    // =====================================================================
+    const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+    const callOverlay = document.getElementById('call-overlay');
+    const callAvatar = document.getElementById('call-avatar');
+    const callPeerName = document.getElementById('call-peer-name');
+    const callStateLabel = document.getElementById('call-state-label');
+    const callTimerEl = document.getElementById('call-timer');
+    const callActionsRinging = document.getElementById('call-actions-ringing');
+    const callActionsActive = document.getElementById('call-actions-active');
+    const incomingCallEl = document.getElementById('incoming-call');
+    const remoteAudio = document.getElementById('remoteAudio');
+
+    let callSession = null; // { callId, role, peerId, peer, callType, state }
+    let pc = null;
+    let pendingIce = []; // queue ICE until peer connection exists
+    let localStream = null;
+    let callTimerInterval = null;
+    let callConnectedAt = null;
+    let ringAudioCtx = null;
+    let ringOscTimer = null;
+
+    function peerPerson(peerId) {
+      return personById(peerId) || {
+        id: peerId,
+        display_name: 'User ' + peerId,
+        name: 'User ' + peerId,
+      };
+    }
+
+    function startRingtone() {
+      stopRingtone();
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        ringAudioCtx = new Ctx();
+        const beep = () => {
+          if (!ringAudioCtx) return;
+          const osc = ringAudioCtx.createOscillator();
+          const gain = ringAudioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = 880;
+          gain.gain.value = 0.05;
+          osc.connect(gain);
+          gain.connect(ringAudioCtx.destination);
+          osc.start();
+          osc.stop(ringAudioCtx.currentTime + 0.18);
+        };
+        beep();
+        ringOscTimer = setInterval(beep, 1200);
+      } catch (_) { /* ignore */ }
+    }
+
+    function stopRingtone() {
+      if (ringOscTimer) { clearInterval(ringOscTimer); ringOscTimer = null; }
+      if (ringAudioCtx) {
+        try { ringAudioCtx.close(); } catch (_) {}
+        ringAudioCtx = null;
+      }
+    }
+
+    function formatCallClock(ms) {
+      const total = Math.max(0, Math.floor(ms / 1000));
+      const m = String(Math.floor(total / 60)).padStart(2, '0');
+      const s = String(total % 60).padStart(2, '0');
+      return m + ':' + s;
+    }
+
+    function startCallTimer() {
+      stopCallTimer();
+      callConnectedAt = Date.now();
+      callTimerEl.style.display = '';
+      callTimerEl.textContent = '00:00';
+      callTimerInterval = setInterval(() => {
+        callTimerEl.textContent = formatCallClock(Date.now() - callConnectedAt);
+      }, 500);
+    }
+
+    function stopCallTimer() {
+      if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
+      callConnectedAt = null;
+      callTimerEl.style.display = 'none';
+    }
+
+    function showCallOverlay(person, label, mode) {
+      // mode: 'ringing' | 'active' | 'status'
+      paintAvatar(callAvatar, person);
+      callPeerName.textContent = person.name || person.display_name || 'Contact';
+      callStateLabel.textContent = label;
+      callOverlay.classList.toggle('ringing', mode === 'ringing');
+      callOverlay.classList.add('show');
+      callActionsRinging.style.display = mode === 'ringing' ? 'flex' : 'none';
+      callActionsActive.style.display = mode === 'active' ? 'flex' : 'none';
+      if (mode !== 'active') stopCallTimer();
+    }
+
+    function hideCallOverlay() {
+      callOverlay.classList.remove('show', 'ringing');
+      stopCallTimer();
+      document.getElementById('call-mute-btn').classList.remove('on');
+    }
+
+    function showIncoming(from, callType) {
+      paintAvatar(document.getElementById('incoming-avatar'), from);
+      document.getElementById('incoming-name').textContent = from.name || from.display_name || 'Caller';
+      document.getElementById('incoming-sub').textContent =
+        callType === 'video' ? 'Incoming video call…' : 'Incoming voice call…';
+      incomingCallEl.classList.add('show');
+      startRingtone();
+    }
+
+    function hideIncoming() {
+      incomingCallEl.classList.remove('show');
+      stopRingtone();
+    }
+
+    async function getMicStream() {
+      return navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    }
+
+    function attachRemoteTrack(event) {
+      if (!remoteAudio) return;
+      if (remoteAudio.srcObject !== event.streams[0]) {
+        remoteAudio.srcObject = event.streams[0];
+      }
+      remoteAudio.play().catch(() => {});
+    }
+
+    function createPeerConnection(callId) {
+      const connection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      connection.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('call:ice-candidate', {
+            callId,
+            candidate: event.candidate,
+          });
+        }
+      };
+      connection.ontrack = attachRemoteTrack;
+      return connection;
+    }
+
+    async function flushPendingIce() {
+      if (!pc || !pendingIce.length) return;
+      const queued = pendingIce.splice(0, pendingIce.length);
+      for (const candidate of queued) {
+        try {
+          await pc.addIceCandidate(candidate);
+        } catch (err) {
+          console.warn('[call] ice flush error', err);
+        }
+      }
+    }
+
+    async function startWebRtcAsCaller(callId) {
+      localStream = await getMicStream();
+      pc = createPeerConnection(callId);
+      localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit('call:offer', { callId, sdp: offer });
+      await flushPendingIce();
+    }
+
+    function teardownMedia() {
+      stopRingtone();
+      stopCallTimer();
+      pendingIce = [];
+      if (pc) {
+        try { pc.close(); } catch (_) {}
+        pc = null;
+      }
+      if (localStream) {
+        localStream.getTracks().forEach((t) => t.stop());
+        localStream = null;
+      }
+      if (remoteAudio) remoteAudio.srcObject = null;
+    }
+
+    function endCallUi(statusText) {
+      hideIncoming();
+      if (statusText) {
+        const person = callSession
+          ? peerPerson(callSession.peerId)
+          : { display_name: 'Call', name: 'Call' };
+        showCallOverlay(person, statusText, 'status');
+        setTimeout(() => {
+          hideCallOverlay();
+        }, 1600);
+      } else {
+        hideCallOverlay();
+      }
+      teardownMedia();
+      callSession = null;
+      if (activeRailTab === 'calls') loadCallHistory();
+    }
+
+    function hangUp() {
+      if (!callSession) {
+        hideCallOverlay();
+        hideIncoming();
+        teardownMedia();
+        return;
+      }
+      const id = callSession.callId;
+      // Always tell the server — even if callId isn't ack'd yet, server can
+      // end the ringing call for this user.
+      socket.emit('call:end', { callId: id || null, receiverId: callSession.peerId });
+      endCallUi(null);
+      hideCallOverlay();
+    }
+
+    async function startVoiceCall() {
+      if (currentContactId == null || getMyId() == null) return;
+      if (callSession) {
+        alert('You are already in a call.');
+        return;
+      }
+      const peerId = Number(currentContactId);
+      const person = peerPerson(peerId);
+
+      showCallOverlay(person, 'Calling…', 'ringing');
+      callSession = {
+        callId: null,
+        role: 'caller',
+        peerId,
+        peer: person,
+        callType: 'voice',
+        state: 'ringing',
+      };
+
+      socket.emit('call:invite', { receiverId: peerId, callType: 'voice' }, (ack) => {
+        if (!ack || ack.error) {
+          endCallUi(ack && ack.error ? ack.error : 'Could not start call');
+          return;
+        }
+        // User may have already cancelled before the ack arrived.
+        if (!callSession) {
+          socket.emit('call:end', { callId: ack.callId, receiverId: peerId });
+          return;
+        }
+        callSession.callId = ack.callId;
+        const name = person.name || person.display_name || 'Contact';
+        if (ack.online) {
+          callStateLabel.textContent = 'Ringing ' + name + '…';
+        } else {
+          callStateLabel.textContent = 'Calling…';
+        }
+      });
+    }
+
+    voiceCallBtn.addEventListener('click', () => {
+      if (voiceCallBtn.disabled || currentContactId == null) return;
+      startVoiceCall();
+    });
+    document.getElementById('call-cancel-btn').addEventListener('click', hangUp);
+    document.getElementById('call-hangup-btn').addEventListener('click', hangUp);
+    document.getElementById('call-mute-btn').addEventListener('click', () => {
+      if (!localStream) return;
+      const track = localStream.getAudioTracks()[0];
+      if (!track) return;
+      track.enabled = !track.enabled;
+      document.getElementById('call-mute-btn').classList.toggle('on', !track.enabled);
+    });
+    document.getElementById('incoming-decline').addEventListener('click', () => {
+      if (!callSession) { hideIncoming(); return; }
+      socket.emit('call:decline', { callId: callSession.callId });
+      hideIncoming();
+      callSession = null;
+      teardownMedia();
+      if (activeRailTab === 'calls') loadCallHistory();
+    });
+    document.getElementById('incoming-accept').addEventListener('click', async () => {
+      if (!callSession || callSession.role !== 'callee') return;
+      hideIncoming();
+      stopRingtone();
+      try {
+        // Mic permission early; WebRTC answer waits for offer.
+        localStream = await getMicStream();
+        socket.emit('call:accept', { callId: callSession.callId });
+        callSession.state = 'active';
+        showCallOverlay(callSession.peer, 'Connecting…', 'active');
+        startCallTimer();
+      } catch (err) {
+        console.error(err);
+        alert('Microphone permission is required for voice calls.');
+        socket.emit('call:decline', { callId: callSession.callId });
+        callSession = null;
+        teardownMedia();
+        hideCallOverlay();
+      }
+    });
+
+    // ----- Socket.IO listeners (socket created above) -----
+    // Every message:new (sent or received, any type) goes through insertTimelineItem
+    // so late/out-of-order events (e.g. call pills stamped with started_at) land correctly.
+    socket.on('message:new', (raw) => {
+      const message = normalizeMessage(raw);
+      if (!message) return;
+
+      if (belongsToOpenChat(message)) {
+        const hint = threadBody.querySelector('.empty-hint');
+        if (hint) {
+          threadBody.innerHTML = '';
+          renderedMessageIds.clear();
+        }
+        insertTimelineItem(message);
+        // Receiving (or echoing) a message must never hide the typing bar.
+        ensureComposerVisible();
+        // Incoming while this chat is open → mark read immediately.
+        if (me && sameId(message.sender_id, currentContactId)) {
+          socket.emit('chat:open', { contactId: currentContactId });
+        }
+      }
+      upsertSidebarConversation(message); // media preview for every conversation
+    });
+
+    socket.on('message:status', ({ id, status }) => {
+      applyMessageStatus(id, status);
+    });
+
+    // Read receipts: when the other person opens our chat (or is already in it).
+    function handleMessagesRead({ by, messageIds }) {
+      if (Array.isArray(messageIds) && messageIds.length) {
+        messageIds.forEach((id) => applyMessageStatus(id, 'read'));
+        return;
+      }
+      // Fallback: if that conversation is open, blue-tick every mine bubble.
+      if (!sameId(by, currentContactId)) return;
+      threadBody.querySelectorAll('.msg.mine .msg-ticks').forEach((ticks) => {
+        paintTicks(ticks, 'read');
+      });
+    }
+    socket.on('messages:read', handleMessagesRead);
+    socket.on('message:read', handleMessagesRead); // legacy alias
+
+    // ----- Call signaling -----
+    socket.on('call:incoming', ({ callId, callType, from }) => {
+      if (callSession) {
+        // Busy — auto-decline.
+        socket.emit('call:decline', { callId });
+        return;
+      }
+      callSession = {
+        callId,
+        role: 'callee',
+        peerId: from.id,
+        peer: from,
+        callType: callType || 'voice',
+        state: 'ringing',
+      };
+      showIncoming(from, callType || 'voice');
+    });
+
+    socket.on('call:accepted', async ({ callId }) => {
+      if (!callSession || callSession.callId !== callId) return;
+      callSession.state = 'active';
+      showCallOverlay(callSession.peer, 'Connected', 'active');
+      startCallTimer();
+      if (callSession.role === 'caller') {
+        try {
+          await startWebRtcAsCaller(callId);
+        } catch (err) {
+          console.error(err);
+          alert('Could not access microphone.');
+          hangUp();
+        }
+      }
+    });
+
+    socket.on('call:declined', () => {
+      endCallUi('Call declined');
+    });
+
+    socket.on('call:ended', ({ reason }) => {
+      if (!callSession && !callOverlay.classList.contains('show') && !incomingCallEl.classList.contains('show')) {
+        if (activeRailTab === 'calls') loadCallHistory();
+        return;
+      }
+      let msg = null;
+      if (reason === 'no-answer') msg = 'No answer';
+      else if (reason === 'declined') msg = 'Call declined';
+      else if (reason === 'cancelled') msg = 'Call cancelled';
+      else if (reason === 'disconnect') msg = 'Call ended';
+      else msg = null; // hangup — just close
+      hideIncoming();
+      if (msg) endCallUi(msg);
+      else {
+        teardownMedia();
+        hideCallOverlay();
+        callSession = null;
+        if (activeRailTab === 'calls') loadCallHistory();
+      }
+    });
+
+    socket.on('call:offer', async ({ callId, sdp }) => {
+      if (!callSession || callSession.callId !== callId || callSession.role !== 'callee') return;
+      try {
+        if (!localStream) localStream = await getMicStream();
+        if (!pc) {
+          pc = createPeerConnection(callId);
+          localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+        }
+        await pc.setRemoteDescription(sdp);
+        await flushPendingIce();
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket.emit('call:answer', { callId, sdp: answer });
+        callStateLabel.textContent = 'Connected';
+      } catch (err) {
+        console.error('[call] offer failed', err);
+        hangUp();
+      }
+    });
+
+    socket.on('call:answer', async ({ callId, sdp }) => {
+      if (!callSession || callSession.callId !== callId || !pc) return;
+      try {
+        await pc.setRemoteDescription(sdp);
+        await flushPendingIce();
+        callStateLabel.textContent = 'Connected';
+      } catch (err) {
+        console.error('[call] answer failed', err);
+      }
+    });
+
+    socket.on('call:ice-candidate', async ({ callId, candidate }) => {
+      if (!callSession || callSession.callId !== callId || !candidate) return;
+      if (!pc) {
+        pendingIce.push(candidate);
+        return;
+      }
+      try {
+        await pc.addIceCandidate(candidate);
+      } catch (err) {
+        console.warn('[call] ice error', err);
+      }
+    });
+
+    socket.on('calls:updated', () => {
+      if (activeRailTab === 'calls') loadCallHistory();
+    });
+
+    socket.on('presence:update', ({ userId, online, lastSeen }) => {
+      const contact = contacts.find((c) => sameId(c.id, userId));
+      if (contact) {
+        contact.online = online;
+        contact.last_seen = lastSeen;
+      }
+      const conv = conversations.find((c) => sameId(c.id, userId));
+      if (conv) {
+        conv.online = online;
+        conv.last_seen = lastSeen;
+      }
+      renderOnline();
+      renderConversations();
+      if (sameId(currentContactId, userId)) {
+        document.getElementById('thread-status').textContent =
+          online ? 'online' : (lastSeen ? 'last seen ' + timeLabel(lastSeen) : 'offline');
+      }
+    });
+
+    socket.on('unread:update', ({ contactId, count }) => {
+      const conv = conversations.find((c) => sameId(c.id, contactId));
+      if (conv) {
+        conv.unread = sameId(contactId, currentContactId) ? 0 : count;
+        renderConversations();
+      } else {
+        loadAll();
+      }
+    });
+
+    loadMe().then(loadAll).then(() => {
+      // Ensure chats sidebar (not calls) is visible on every fresh load.
+      setRailTab('chats');
+    });
+  </script>
+</body>
+</html>

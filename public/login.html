@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in · ChatConnect</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="splash-body">
+  <main class="auth2-card">
+    <div class="auth2-logo">
+      <span class="welcome-logo-mark">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path fill="#fff" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4V6a2 2 0 0 1 2-2z" />
+        </svg>
+      </span>
+      <span class="welcome-logo-name">Chat<span class="brand-accent">Connect</span></span>
+    </div>
+
+    <h1 id="auth2-title" class="auth2-title">Welcome back</h1>
+    <p id="auth2-subtitle" class="auth2-subtitle">Enter your details to access your account</p>
+
+    <!-- Social (visual only for now) -->
+    <div class="auth2-social">
+      <button type="button" class="social-btn" data-provider="Google">
+        <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.2 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9.1h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-16.5z"/><path fill="#FBBC05" d="M10.4 28.3c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.8-6.1C1 16.1 0 19.9 0 24s1 7.9 2.6 11.1l7.8-6.8z"/><path fill="#34A853" d="M24 48c6.2 0 11.5-2 15.3-5.5l-7.1-5.5c-2 1.4-4.6 2.2-8.2 2.2-6.4 0-11.8-3.7-13.6-9.8l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+        Google
+      </button>
+      <button type="button" class="social-btn" data-provider="Apple">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#111" d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.9-1.5-.1-2.8.9-3.5.9s-1.9-.9-3.1-.8c-1.6 0-3 .9-3.8 2.4-1.6 2.8-.4 6.9 1.2 9.2.8 1.1 1.7 2.3 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7 2-1 2.8-2.1c.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.6zM14.2 5.3c.6-.8 1.1-1.9 1-3-1 0-2.1.6-2.8 1.4-.6.7-1.1 1.8-1 2.9 1.1.1 2.2-.5 2.8-1.3z"/></svg>
+        Apple
+      </button>
+    </div>
+
+    <div class="auth2-divider"><span>OR CONTINUE WITH</span></div>
+
+    <!-- Login form -->
+    <form id="login-form" class="auth2-form">
+      <label class="auth2-field">
+        <span class="auth2-label">Email address</span>
+        <span class="input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+          <input name="email" type="email" autocomplete="email" placeholder="name@company.com" required />
+        </span>
+      </label>
+
+      <label class="auth2-field">
+        <span class="auth2-label-row">
+          <span class="auth2-label">Password</span>
+          <a href="#" class="auth2-forgot" data-soon="Password reset">Forgot Password?</a>
+        </span>
+        <span class="input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input name="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+          <button type="button" class="pw-toggle" aria-label="Show password">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </span>
+      </label>
+
+      <label class="auth2-remember">
+        <input type="checkbox" name="remember" />
+        <span>Keep me logged in</span>
+      </label>
+
+      <button type="submit" class="btn-primary">Sign In</button>
+    </form>
+
+    <!-- Signup form (hidden by default) -->
+    <form id="signup-form" class="auth2-form hidden">
+      <label class="auth2-field">
+        <span class="auth2-label">Email address</span>
+        <span class="input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+          <input name="email" type="email" autocomplete="email" placeholder="name@company.com" required />
+        </span>
+      </label>
+
+      <label class="auth2-field">
+        <span class="auth2-label">Display name</span>
+        <span class="input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+          <input name="displayName" type="text" autocomplete="name" placeholder="Optional" />
+        </span>
+      </label>
+
+      <label class="auth2-field">
+        <span class="auth2-label">Password</span>
+        <span class="input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input name="password" type="password" autocomplete="new-password" placeholder="At least 6 characters" required />
+          <button type="button" class="pw-toggle" aria-label="Show password">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </span>
+      </label>
+
+      <button type="submit" class="btn-primary">Create account</button>
+    </form>
+
+    <p id="message" class="message"></p>
+
+    <p class="auth2-switch">
+      <span data-mode="login">Don't have an account? <a href="#" id="go-signup">Sign Up</a></span>
+      <span data-mode="signup" class="hidden">Already have an account? <a href="#" id="go-login">Log in</a></span>
+    </p>
+
+    <div class="auth2-footer">
+      <a href="#" data-soon="Privacy Policy">Privacy Policy</a>
+      <a href="#" data-soon="Terms of Service">Terms of Service</a>
+      <a href="#" data-soon="Help Center">Help Center</a>
+    </div>
+
+    <!-- DEV ONLY: quick way to preview the dashboard with fake data. Remove
+         this block (and server/dev.js) before production. Hidden until
+         /api/dev/status confirms seeding is enabled. -->
+    <button type="button" id="seed-demo" class="dev-seed" hidden>⚙ DEV: Seed demo data &amp; preview</button>
+  </main>
+
+  <script src="/js/session.js"></script>
+  <script src="/js/auth.js"></script>
+</body>
+</html>
