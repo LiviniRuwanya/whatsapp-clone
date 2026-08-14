@@ -113,25 +113,30 @@ function initSchema() {
     db.exec('ALTER TABLE users ADD COLUMN last_seen TEXT');
   }
   // Profile customization: about text + per-field privacy.
-  // SQLite ALTER TABLE cannot add CHECK constraints; we validate in app code.
-  // Reuses existing `last_seen` (no separate last_seen_at column).
-  const DEFAULT_ABOUT = 'Hey there! I am using WhatsApp Clone.';
+  // (avatar_url / last_seen already existed — we reuse last_seen, not last_seen_at.)
   if (!userCols.includes('about')) {
-    db.exec(`ALTER TABLE users ADD COLUMN about TEXT DEFAULT '${DEFAULT_ABOUT}'`);
-    db.exec(`UPDATE users SET about = '${DEFAULT_ABOUT}' WHERE about IS NULL`);
+    db.exec(
+      "ALTER TABLE users ADD COLUMN about TEXT DEFAULT 'Hey there! I am using WhatsApp Clone.'"
+    );
   }
-  for (const col of [
-    'privacy_avatar',
-    'privacy_about',
-    'privacy_last_seen',
-    'privacy_status',
-  ]) {
-    if (!userCols.includes(col)) {
-      db.exec(`ALTER TABLE users ADD COLUMN ${col} TEXT NOT NULL DEFAULT 'everyone'`);
-    }
+  const privacyCols = [
+    ['privacy_avatar', "privacy_avatar TEXT NOT NULL DEFAULT 'everyone'"],
+    ['privacy_about', "privacy_about TEXT NOT NULL DEFAULT 'everyone'"],
+    ['privacy_last_seen', "privacy_last_seen TEXT NOT NULL DEFAULT 'everyone'"],
+    ['privacy_status', "privacy_status TEXT NOT NULL DEFAULT 'everyone'"],
+  ];
+  for (const [name, ddl] of privacyCols) {
+    if (!userCols.includes(name)) db.exec(`ALTER TABLE users ADD COLUMN ${ddl}`);
+  }
+  if (!userCols.includes('google_id')) {
+    db.exec('ALTER TABLE users ADD COLUMN google_id TEXT');
+    db.exec(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id
+        ON users (google_id) WHERE google_id IS NOT NULL
+    `);
   }
 
-  // Who is excluded when privacy_* = 'contacts_except'.
+  // Who is excluded when privacy_* = 'contacts_except' for a given field.
   db.exec(`
     CREATE TABLE IF NOT EXISTS privacy_exceptions (
       id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -223,13 +228,38 @@ initSchema();
 
 // ---------- User queries ----------
 // Returns the newly created user (without the password hash).
-function createUser({ email, displayName, passwordHash }) {
+function createUser({ email, displayName, passwordHash, googleId = null, avatarUrl = null }) {
   const stmt = db.prepare(`
-    INSERT INTO users (email, display_name, password_hash)
-    VALUES (@email, @displayName, @passwordHash)
+    INSERT INTO users (email, display_name, password_hash, google_id, avatar_url)
+    VALUES (@email, @displayName, @passwordHash, @googleId, @avatarUrl)
   `);
-  const info = stmt.run({ email, displayName, passwordHash });
+  const info = stmt.run({ email, displayName, passwordHash, googleId, avatarUrl });
   return getUserById(info.lastInsertRowid);
+}
+
+function getUserByGoogleId(googleId) {
+  return db.prepare('SELECT * FROM users WHERE google_id = ?').get(googleId);
+}
+
+// Link Google to an existing email/password account, or refresh profile fields.
+function linkGoogleAccount(userId, { googleId, displayName, avatarUrl }) {
+  const row = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  if (!row) return null;
+  if (row.google_id && row.google_id !== googleId) {
+    return { error: 'conflict' };
+  }
+  const updates = ['google_id = @googleId'];
+  const params = { userId, googleId };
+  if (displayName && displayName.trim()) {
+    updates.push('display_name = @displayName');
+    params.displayName = displayName.trim();
+  }
+  if (avatarUrl && !row.avatar_url) {
+    updates.push('avatar_url = @avatarUrl');
+    params.avatarUrl = avatarUrl;
+  }
+  db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = @userId`).run(params);
+  return getUserById(userId);
 }
 
 // Full row INCLUDING password_hash — only use this for login verification.
@@ -255,17 +285,21 @@ function getUserById(id) {
 const DEFAULT_ABOUT = 'Hey there! I am using WhatsApp Clone.';
 const PRIVACY_VALUES = new Set(['everyone', 'contacts', 'contacts_except', 'nobody']);
 const PRIVACY_FIELDS = new Set(['avatar', 'about', 'last_seen', 'status']);
-const PRIVACY_COLUMN = {
-  avatar: 'privacy_avatar',
-  about: 'privacy_about',
-  last_seen: 'privacy_last_seen',
-  status: 'privacy_status',
-};
+
+function privacyColumn(field) {
+  return ({
+    avatar: 'privacy_avatar',
+    about: 'privacy_about',
+    last_seen: 'privacy_last_seen',
+    status: 'privacy_status',
+  })[field] || null;
+}
 
 // Full profile for the logged-in user (includes privacy settings + exceptions).
 function getOwnProfile(userId) {
   const user = getUserById(userId);
   if (!user) return null;
+  const authRow = db.prepare('SELECT google_id, created_at FROM users WHERE id = ?').get(userId);
   const exceptions = db
     .prepare(
       'SELECT field, excluded_user_id FROM privacy_exceptions WHERE owner_id = ? ORDER BY field, excluded_user_id'
@@ -280,7 +314,7 @@ function getOwnProfile(userId) {
     email: user.email,
     display_name: user.display_name,
     avatar_url: user.avatar_url || null,
-    about: user.about != null ? user.about : DEFAULT_ABOUT,
+    about: user.about != null && user.about !== '' ? user.about : DEFAULT_ABOUT,
     privacy: {
       avatar: user.privacy_avatar || 'everyone',
       about: user.privacy_about || 'everyone',
@@ -288,10 +322,11 @@ function getOwnProfile(userId) {
       status: user.privacy_status || 'everyone',
     },
     privacy_exceptions: byField,
-    is_online: !!user.is_online,
-    last_seen: user.last_seen || null,
-    last_seen_at: user.last_seen || null,
+    is_online: user.is_online,
+    last_seen: user.last_seen,
     created_at: user.created_at,
+    google_linked: !!(authRow && authRow.google_id),
+    auth_method: authRow && authRow.google_id ? 'google' : 'email',
   };
 }
 
@@ -300,35 +335,38 @@ function updateUserAbout(userId, about) {
   return getOwnProfile(userId);
 }
 
+function updateUserDisplayName(userId, displayName) {
+  const name = String(displayName || '').trim();
+  if (!name) return null;
+  db.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(name, userId);
+  return getOwnProfile(userId);
+}
+
 function updateUserAvatar(userId, avatarUrl) {
   db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(avatarUrl, userId);
   return getOwnProfile(userId);
 }
 
-function updateUserPrivacy(userId, field, value, exceptionUserIds) {
-  const col = PRIVACY_COLUMN[field];
+function updateUserPrivacy(userId, field, value, exceptionIds = []) {
+  const col = privacyColumn(field);
   if (!col || !PRIVACY_VALUES.has(value)) return null;
 
-  const run = db.transaction(() => {
+  const tx = db.transaction(() => {
     db.prepare(`UPDATE users SET ${col} = ? WHERE id = ?`).run(value, userId);
     db.prepare(
       'DELETE FROM privacy_exceptions WHERE owner_id = ? AND field = ?'
     ).run(userId, field);
-
-    if (value === 'contacts_except' && Array.isArray(exceptionUserIds)) {
+    if (value === 'contacts_except' && exceptionIds.length > 0) {
       const insert = db.prepare(`
         INSERT OR IGNORE INTO privacy_exceptions (owner_id, field, excluded_user_id)
         VALUES (?, ?, ?)
       `);
-      for (const raw of exceptionUserIds) {
-        const excludedId = Number(raw);
-        if (!Number.isInteger(excludedId) || excludedId === userId) continue;
-        if (!getUserById(excludedId)) continue;
+      for (const excludedId of exceptionIds) {
         insert.run(userId, field, excludedId);
       }
     }
   });
-  run();
+  tx();
   return getOwnProfile(userId);
 }
 
@@ -341,25 +379,9 @@ function getPrivacyExceptions(ownerId, field) {
     .map((r) => r.excluded_user_id);
 }
 
-// Raw privacy settings row for a user (used by the privacy helper).
-function getPrivacySettings(userId) {
-  const user = getUserById(userId);
-  if (!user) return null;
-  return {
-    id: user.id,
-    email: user.email,
-    display_name: user.display_name,
-    avatar_url: user.avatar_url || null,
-    about_text: user.about != null ? user.about : DEFAULT_ABOUT,
-    is_online: !!user.is_online,
-    last_seen_at: user.last_seen || null,
-    privacy: {
-      avatar: user.privacy_avatar || 'everyone',
-      about: user.privacy_about || 'everyone',
-      last_seen: user.privacy_last_seen || 'everyone',
-      status: user.privacy_status || 'everyone',
-    },
-  };
+// Raw owner row + privacy settings (for applying canView).
+function getUserPrivacyBundle(userId) {
+  return getUserById(userId);
 }
 
 // ---------- Presence queries ----------
@@ -787,6 +809,8 @@ function getCallHistory(userId) {
 module.exports = {
   db,
   createUser,
+  getUserByGoogleId,
+  linkGoogleAccount,
   getUserByEmail,
   getUserById,
   DEFAULT_ABOUT,
@@ -794,10 +818,11 @@ module.exports = {
   PRIVACY_FIELDS,
   getOwnProfile,
   updateUserAbout,
+  updateUserDisplayName,
   updateUserAvatar,
   updateUserPrivacy,
   getPrivacyExceptions,
-  getPrivacySettings,
+  getUserPrivacyBundle,
   // presence
   setUserOnline,
   setUserOffline,

@@ -18,6 +18,7 @@ const presence = require('./presence');
 const api = require('./api');
 const upload = require('./upload');
 const profile = require('./profile');
+const { canView } = require('./privacy');
 
 const app = express();
 const server = http.createServer(app);
@@ -474,12 +475,121 @@ async function isViewingChat(userId, contactId) {
   return sockets.some((s) => Number(s.data.activeChat) === Number(contactId));
 }
 
+// Presence goes to people who have `userId` in their contacts (same as before),
+// but last-seen privacy is enforced with canView — viewers who fail the check
+// get NO event on connect/disconnect (online + last seen are tied together).
 function broadcastPresence(userId, { online, lastSeen }) {
+  const owner = db.getUserById(userId);
+  if (!owner) return;
+
+  const privacyValue = owner.privacy_last_seen || 'everyone';
+  const exceptions = db.getPrivacyExceptions(userId, 'last_seen');
   const watchers = db.getContactOwners(userId);
+
   for (const watcherId of watchers) {
-    io.to(`user:${watcherId}`).emit('presence:update', { userId, online, lastSeen });
+    // "My contacts" = owner has the watcher in their contact list.
+    const isContact = !!db.getContact(userId, watcherId);
+    if (!canView(watcherId, userId, 'last_seen', privacyValue, isContact, exceptions)) {
+      continue;
+    }
+    io.to(`user:${watcherId}`).emit('presence:update', {
+      userId,
+      online,
+      // Spec name + existing client field (chat.html already reads lastSeen).
+      last_seen_at: lastSeen || null,
+      lastSeen: lastSeen || null,
+    });
   }
 }
+
+// After last_seen privacy changes: watchers who lost access must clear stale
+// online dots / "last seen" text. Watchers who still have access get a refresh.
+function syncPresenceAfterPrivacyChange(userId) {
+  const owner = db.getUserById(userId);
+  if (!owner) return;
+
+  const privacyValue = owner.privacy_last_seen || 'everyone';
+  const exceptions = db.getPrivacyExceptions(userId, 'last_seen');
+  const watchers = db.getContactOwners(userId);
+  const online = presence.isOnline(userId);
+  const lastSeen = online ? null : (owner.last_seen || null);
+
+  for (const watcherId of watchers) {
+    const isContact = !!db.getContact(userId, watcherId);
+    const allowed = canView(
+      watcherId,
+      userId,
+      'last_seen',
+      privacyValue,
+      isContact,
+      exceptions
+    );
+    if (allowed) {
+      io.to(`user:${watcherId}`).emit('presence:update', {
+        userId,
+        online,
+        last_seen_at: lastSeen,
+        lastSeen,
+      });
+    } else {
+      // Explicit clear — otherwise open tabs keep a stale green dot.
+      io.to(`user:${watcherId}`).emit('presence:update', {
+        userId,
+        online: false,
+        last_seen_at: null,
+        lastSeen: null,
+      });
+    }
+  }
+}
+
+// Avatar / about changes: same watcher set as presence (contact owners),
+// plus the user's own room so other tabs update. Avatar/about fields are
+// privacy-filtered per recipient; omitted fields are simply left out.
+function broadcastProfileUpdated(userId, { avatar_url, about }) {
+  const owner = db.getUserById(userId);
+  if (!owner) return;
+
+  const full = {
+    userId,
+    avatar_url: avatar_url !== undefined ? avatar_url : (owner.avatar_url || null),
+    about:
+      about !== undefined
+        ? about
+        : (owner.about != null && owner.about !== '' ? owner.about : db.DEFAULT_ABOUT),
+  };
+
+  // Own tabs always get the full payload.
+  io.to(`user:${userId}`).emit('profile:updated', full);
+
+  const avatarPrivacy = owner.privacy_avatar || 'everyone';
+  const aboutPrivacy = owner.privacy_about || 'everyone';
+  const avatarExceptions = db.getPrivacyExceptions(userId, 'avatar');
+  const aboutExceptions = db.getPrivacyExceptions(userId, 'about');
+  const watchers = db.getContactOwners(userId);
+
+  for (const watcherId of watchers) {
+    if (Number(watcherId) === Number(userId)) continue;
+    const isContact = !!db.getContact(userId, watcherId);
+    const payload = {
+      userId,
+      // Always include fields; null = hidden by privacy (so clients can clear old UI).
+      avatar_url: canView(watcherId, userId, 'avatar', avatarPrivacy, isContact, avatarExceptions)
+        ? full.avatar_url
+        : null,
+      about: canView(watcherId, userId, 'about', aboutPrivacy, isContact, aboutExceptions)
+        ? full.about
+        : null,
+    };
+    io.to(`user:${watcherId}`).emit('profile:updated', payload);
+  }
+}
+
+// Wire REST profile mutations → Socket.IO (same user:${id} rooms as messages).
+profile.setRealtime({
+  broadcastProfileUpdated,
+  syncPresenceAfterPrivacyChange,
+});
 
 server.listen(PORT, () => {
   console.log(`WhatsApp-clone server running at http://localhost:${PORT}`);

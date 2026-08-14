@@ -171,6 +171,207 @@
       letter-spacing: .06em; color: var(--muted);
     }
     .sidebar.show-calls .sidebar-panel-title { display: block; }
+
+    /* Settings — sidebar preview when settings tab is active */
+    .settings-sidebar-preview {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+    .sidebar.show-settings .settings-sidebar-preview { display: block; }
+    .settings-preview-card {
+      background: linear-gradient(135deg, #6d5efc 0%, #4338ca 100%);
+      border-radius: 16px;
+      padding: 20px 16px;
+      text-align: center;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+    .settings-preview-card .avatar {
+      width: 72px; height: 72px; font-size: 26px;
+      margin: 0 auto 10px;
+      border: 3px solid rgba(255,255,255,.35);
+    }
+    .settings-preview-name { font-size: 16px; font-weight: 800; }
+    .settings-preview-email { font-size: 12px; opacity: .85; margin-top: 2px; }
+    .settings-sidebar-nav {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .settings-nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 12px; border-radius: 10px;
+      font-size: 14px; font-weight: 600; color: var(--ink);
+      background: transparent; border: none; cursor: pointer;
+      text-align: left; width: 100%;
+      transition: background .12s ease;
+    }
+    .settings-nav-item:hover { background: #f3f1ff; }
+    .settings-nav-item.active { background: #efeafe; color: var(--indigo-deep); }
+    .settings-nav-item svg { flex-shrink: 0; opacity: .7; }
+
+    /* Settings — full page in main panel */
+    .settings-view {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+      background: #f8f8fc;
+    }
+    .layout.in-settings .settings-view { display: flex; }
+    .layout.in-settings .empty-state,
+    .layout.in-settings .thread { display: none !important; }
+    .settings-page-head {
+      flex: none;
+      padding: 28px 32px 16px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+    }
+    .settings-page-head h1 {
+      margin: 0; font-size: 24px; font-weight: 800; color: var(--ink);
+    }
+    .settings-page-sub {
+      margin: 6px 0 0; font-size: 14px; color: var(--muted);
+    }
+    .settings-page-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 32px 40px;
+      max-width: 720px;
+    }
+    .settings-section {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 16px;
+      scroll-margin-top: 16px;
+    }
+    .settings-section-title {
+      font-size: 12px; font-weight: 700; letter-spacing: .06em;
+      color: var(--muted); margin-bottom: 14px;
+    }
+    .settings-profile {
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      text-align: center;
+    }
+    .settings-avatar-wrap {
+      position: relative; width: 96px; height: 96px;
+    }
+    .settings-avatar-wrap .avatar {
+      width: 96px; height: 96px; font-size: 32px;
+      box-shadow: 0 8px 24px rgba(79,70,229,.2);
+    }
+    .settings-avatar-wrap.loading::after {
+      content: '';
+      position: absolute; inset: 0; border-radius: 50%;
+      background: rgba(30,36,64,.45);
+      background-image: conic-gradient(from 0deg, transparent, #fff);
+      mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+      animation: settings-spin .8s linear infinite;
+    }
+    @keyframes settings-spin { to { transform: rotate(360deg); } }
+    .settings-name { font-size: 17px; font-weight: 800; color: var(--ink); }
+    .settings-email { font-size: 13px; color: var(--muted); margin-top: -4px; }
+    .settings-actions {
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 4px;
+    }
+    .settings-btn {
+      border: none; border-radius: 10px; padding: 9px 14px; font-size: 13px;
+      font-weight: 600; cursor: pointer;
+      background: #f3f3f9; color: #5b6070;
+      transition: background .12s ease, color .12s ease;
+    }
+    .settings-btn:hover { background: #e9e7fb; color: var(--indigo-deep); }
+    .settings-btn.primary {
+      background: linear-gradient(135deg, var(--indigo), var(--indigo-deep));
+      color: #fff;
+    }
+    .settings-btn.primary:hover { filter: brightness(1.05); color: #fff; }
+    .settings-btn.danger { color: #ef4444; }
+    .settings-btn.danger:hover { background: #fee2e2; color: #dc2626; }
+    .settings-btn:disabled { opacity: .55; cursor: not-allowed; }
+    .settings-field { margin-top: 16px; text-align: left; }
+    .settings-field label {
+      display: block; font-size: 12px; font-weight: 600; color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .settings-field input[type="text"],
+    .settings-field select {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--line);
+      border-radius: 10px; font-size: 14px; color: var(--ink);
+      background: #fafafa; outline: none;
+    }
+    .settings-field input[type="text"]:focus,
+    .settings-field select:focus { border-color: var(--indigo); background: #fff; }
+    .settings-char {
+      display: flex; justify-content: flex-end; margin-top: 4px;
+      font-size: 11px; color: var(--muted);
+    }
+    .settings-char.warn { color: #ef4444; }
+    .settings-feedback {
+      margin-top: 10px; font-size: 12px; min-height: 16px;
+      color: var(--muted); text-align: center;
+    }
+    .settings-feedback.error { color: #ef4444; }
+    .settings-feedback.ok { color: #16a34a; }
+    .settings-account-row {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; padding: 14px 0; border-top: 1px solid var(--line);
+      font-size: 14px;
+    }
+    .settings-account-row:first-child { border-top: none; padding-top: 0; }
+    .settings-account-label { color: var(--muted); font-weight: 600; font-size: 13px; }
+    .settings-account-value { color: var(--ink); font-weight: 600; text-align: right; }
+    .settings-account-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 999px;
+      background: #f3f1ff; color: var(--indigo-deep);
+      font-size: 12px; font-weight: 700;
+    }
+    .settings-logout-wrap { margin-top: 8px; padding-top: 4px; }
+    .settings-logout-btn {
+      width: 100%; padding: 12px; border-radius: 12px;
+      border: 1px solid #fecaca; background: #fff;
+      color: #dc2626; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: background .12s ease;
+    }
+    .settings-logout-btn:hover { background: #fef2f2; }
+    .sidebar.show-settings .online-section,
+    .sidebar.show-settings .conv-list,
+    .sidebar.show-settings .search,
+    .sidebar.show-settings .call-list,
+    .sidebar.show-settings .sidebar-panel-title { display: none; }
+    .privacy-row {
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 12px 0; border-top: 1px solid var(--line);
+    }
+    .privacy-row:first-of-type { border-top: none; padding-top: 0; }
+    .privacy-row .privacy-label {
+      font-size: 13px; font-weight: 700; color: var(--ink);
+    }
+    .privacy-select {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--line);
+      border-radius: 10px; font-size: 14px; color: var(--ink);
+      background: #fafafa; outline: none;
+    }
+    .privacy-select:focus { border-color: var(--indigo); background: #fff; }
+    .privacy-exceptions {
+      display: none; margin-top: 4px; max-height: 140px; overflow-y: auto;
+      border: 1px solid var(--line); border-radius: 10px; padding: 8px;
+      background: #fafafa;
+    }
+    .privacy-exceptions.show { display: block; }
+    .privacy-exceptions .ex-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 4px; font-size: 13px; color: var(--ink);
+    }
+    .privacy-exceptions .ex-empty {
+      font-size: 12px; color: var(--muted); padding: 6px;
+    }
+    .privacy-exceptions input { accent-color: var(--indigo-deep); }
     .call-row {
       display: flex; align-items: center; gap: 12px;
       padding: 10px 12px; border-radius: 12px; cursor: pointer;
@@ -628,9 +829,130 @@
       <div class="conv-list" id="conv-list"><div class="empty-hint">Loading…</div></div>
       <div class="sidebar-panel-title">RECENT CALLS</div>
       <div class="call-list" id="call-list"><div class="empty-hint">No calls yet.</div></div>
+
+      <div class="settings-sidebar-preview" id="settings-sidebar-preview">
+        <div class="settings-preview-card">
+          <div class="avatar" id="settings-preview-avatar"></div>
+          <div class="settings-preview-name" id="settings-preview-name">—</div>
+          <div class="settings-preview-email" id="settings-preview-email"></div>
+        </div>
+        <nav class="settings-sidebar-nav" aria-label="Settings sections">
+          <button type="button" class="settings-nav-item active" data-settings-section="settings-profile-section">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+            Profile
+          </button>
+          <button type="button" class="settings-nav-item" data-settings-section="settings-privacy-section">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Privacy
+          </button>
+          <button type="button" class="settings-nav-item" data-settings-section="settings-account-section">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Account
+          </button>
+        </nav>
+      </div>
     </aside>
 
     <main class="main" id="main">
+      <div class="settings-view" id="settings-view">
+        <header class="settings-page-head">
+          <h1>Settings</h1>
+          <p class="settings-page-sub">Manage your profile, privacy, and account</p>
+        </header>
+        <div class="settings-page-body">
+          <section class="settings-section" id="settings-profile-section">
+            <div class="settings-section-title">PROFILE</div>
+            <div class="settings-profile">
+              <div class="settings-avatar-wrap" id="settings-avatar-wrap">
+                <div class="avatar" id="settings-avatar"></div>
+              </div>
+              <div class="settings-actions">
+                <button type="button" class="settings-btn primary" id="settings-change-photo">Change photo</button>
+                <button type="button" class="settings-btn danger" id="settings-remove-photo" hidden>Remove photo</button>
+                <input id="settings-avatar-input" type="file" accept="image/jpeg,image/png,image/webp,image/*" hidden />
+              </div>
+              <div class="settings-feedback" id="settings-avatar-feedback"></div>
+            </div>
+            <div class="settings-field">
+              <label for="settings-display-name">Display name</label>
+              <input id="settings-display-name" type="text" maxlength="64" placeholder="Your name" autocomplete="name" />
+              <div class="settings-feedback" id="settings-name-feedback"></div>
+            </div>
+            <div class="settings-field">
+              <label for="settings-about">About</label>
+              <input id="settings-about" type="text" maxlength="139" placeholder="Hey there! I am using WhatsApp Clone." autocomplete="off" />
+              <div class="settings-char"><span id="settings-about-count">0</span>/139</div>
+              <div class="settings-feedback" id="settings-about-feedback"></div>
+            </div>
+          </section>
+
+          <section class="settings-section" id="settings-privacy-section">
+            <div class="settings-section-title">PRIVACY</div>
+            <p style="margin:0 0 14px;font-size:13px;color:var(--muted);line-height:1.5">Control who can see your profile photo, about text, last seen, and status.</p>
+            <div class="privacy-row" data-privacy-field="avatar">
+              <span class="privacy-label">Profile photo</span>
+              <select class="privacy-select" id="privacy-avatar">
+                <option value="everyone">Everyone</option>
+                <option value="contacts">My Contacts</option>
+                <option value="contacts_except">My Contacts Except…</option>
+                <option value="nobody">Nobody</option>
+              </select>
+              <div class="privacy-exceptions" id="privacy-exceptions-avatar"></div>
+            </div>
+            <div class="privacy-row" data-privacy-field="about">
+              <span class="privacy-label">About</span>
+              <select class="privacy-select" id="privacy-about">
+                <option value="everyone">Everyone</option>
+                <option value="contacts">My Contacts</option>
+                <option value="contacts_except">My Contacts Except…</option>
+                <option value="nobody">Nobody</option>
+              </select>
+              <div class="privacy-exceptions" id="privacy-exceptions-about"></div>
+            </div>
+            <div class="privacy-row" data-privacy-field="last_seen">
+              <span class="privacy-label">Last seen</span>
+              <select class="privacy-select" id="privacy-last_seen">
+                <option value="everyone">Everyone</option>
+                <option value="contacts">My Contacts</option>
+                <option value="contacts_except">My Contacts Except…</option>
+                <option value="nobody">Nobody</option>
+              </select>
+              <div class="privacy-exceptions" id="privacy-exceptions-last_seen"></div>
+            </div>
+            <div class="privacy-row" data-privacy-field="status">
+              <span class="privacy-label">Status</span>
+              <select class="privacy-select" id="privacy-status">
+                <option value="everyone">Everyone</option>
+                <option value="contacts">My Contacts</option>
+                <option value="contacts_except">My Contacts Except…</option>
+                <option value="nobody">Nobody</option>
+              </select>
+              <div class="privacy-exceptions" id="privacy-exceptions-status"></div>
+            </div>
+            <div class="settings-feedback" id="settings-privacy-feedback"></div>
+          </section>
+
+          <section class="settings-section" id="settings-account-section">
+            <div class="settings-section-title">ACCOUNT</div>
+            <div class="settings-account-row">
+              <span class="settings-account-label">Email</span>
+              <span class="settings-account-value" id="settings-email">—</span>
+            </div>
+            <div class="settings-account-row">
+              <span class="settings-account-label">Sign-in method</span>
+              <span class="settings-account-value" id="settings-auth-method">—</span>
+            </div>
+            <div class="settings-account-row">
+              <span class="settings-account-label">Member since</span>
+              <span class="settings-account-value" id="settings-member-since">—</span>
+            </div>
+            <div class="settings-logout-wrap">
+              <button type="button" class="settings-logout-btn" id="settings-logout">Log out</button>
+            </div>
+          </section>
+        </div>
+      </div>
+
       <div class="empty-state" id="empty-state">
         <div class="empty-logo">
           <svg viewBox="0 0 24 24" width="46" height="46" aria-hidden="true"><path fill="#fff" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4V6a2 2 0 0 1 2-2z"/></svg>
@@ -753,6 +1075,23 @@
       });
       return { status: res.status, data: await res.json().catch(() => ({})) };
     }
+    async function apiPatch(path, body) {
+      const res = await fetch(path, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify(body),
+      });
+      if (res.status === 401) { clearSession(); location.href = '/'; throw new Error('unauth'); }
+      return { status: res.status, data: await res.json().catch(() => ({})) };
+    }
+    async function apiDelete(path) {
+      const res = await fetch(path, {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer ' + token },
+      });
+      if (res.status === 401) { clearSession(); location.href = '/'; throw new Error('unauth'); }
+      return { status: res.status, data: await res.json().catch(() => ({})) };
+    }
 
     // ----- avatar / time helpers -----
     const AVATAR_COLORS = [
@@ -768,12 +1107,14 @@
       return ((p[0]?.[0] || '') + (p[1]?.[0] || '')).toUpperCase() || '?';
     }
     function paintAvatar(el, person) {
+      if (!el) return;
       const name = person.name || person.display_name || '';
       const avatarUrl = person.avatar || person.avatar_url || null;
       if (avatarUrl) {
         el.style.backgroundImage = `url("${avatarUrl}")`;
         el.style.backgroundSize = 'cover';
         el.style.backgroundPosition = 'center';
+        el.style.backgroundColor = '';
         el.textContent = '';
       } else {
         el.style.backgroundImage = '';
@@ -787,6 +1128,64 @@
       el.className = 'avatar' + (cls ? ' ' + cls : '');
       paintAvatar(el, person);
       return el;
+    }
+
+    // Header / presence line: online → last seen → about → hide (no "offline" fallback).
+    function presenceStatusText(person) {
+      if (!person) return '';
+      if (person.online) return 'online';
+      const seen = person.last_seen || person.last_seen_at || null;
+      if (seen) return 'last seen ' + timeLabel(seen);
+      if (person.about) return person.about;
+      return '';
+    }
+
+    function updateThreadHeader(person) {
+      if (!person) return;
+      paintAvatar(document.getElementById('thread-avatar'), person);
+      document.getElementById('thread-name').textContent =
+        person.name || person.display_name || '';
+      const statusEl = document.getElementById('thread-status');
+      const text = presenceStatusText(person);
+      statusEl.textContent = text;
+      statusEl.style.display = text ? '' : 'none';
+    }
+
+    function mergePersonFields(target, fields) {
+      if (!target || !fields) return target;
+      if (fields.avatar_url !== undefined) {
+        target.avatar_url = fields.avatar_url;
+        target.avatar = fields.avatar_url;
+      }
+      if (fields.avatar !== undefined) {
+        target.avatar = fields.avatar;
+        if (fields.avatar_url === undefined) target.avatar_url = fields.avatar;
+      }
+      if (fields.about !== undefined) target.about = fields.about;
+      if (fields.online !== undefined) target.online = fields.online;
+      if (fields.last_seen !== undefined) target.last_seen = fields.last_seen;
+      if (fields.last_seen_at !== undefined) {
+        target.last_seen_at = fields.last_seen_at;
+        if (fields.last_seen === undefined) target.last_seen = fields.last_seen_at;
+      }
+      if (fields.display_name !== undefined) {
+        target.display_name = fields.display_name;
+        if (!target.name) target.name = fields.display_name;
+      }
+      if (fields.name !== undefined) target.name = fields.name;
+      return target;
+    }
+
+    function applyPersonUpdate(userId, fields) {
+      const contact = contacts.find((c) => sameId(c.id, userId));
+      if (contact) mergePersonFields(contact, fields);
+      const conv = conversations.find((c) => sameId(c.id, userId));
+      if (conv) mergePersonFields(conv, fields);
+      renderOnline();
+      renderConversations();
+      if (sameId(currentContactId, userId)) {
+        updateThreadHeader(personById(userId) || fields);
+      }
     }
     function parseDate(s) { return !s ? null : (/[TZ]/.test(s) ? new Date(s) : new Date(s.replace(' ', 'T') + 'Z')); }
     function timestampMs(s) {
@@ -1345,10 +1744,7 @@
 
       // Show thread + enable composer immediately so the user can type.
       showThreadPanel();
-      paintAvatar(document.getElementById('thread-avatar'), p);
-      document.getElementById('thread-name').textContent = p.name || p.display_name;
-      document.getElementById('thread-status').textContent =
-        p.online ? 'online' : (p.last_seen ? 'last seen ' + timeLabel(p.last_seen) : 'offline');
+      updateThreadHeader(p);
 
       // Mark unread messages from this contact as read → triggers messages:read for them.
       socket.emit('chat:open', { contactId: id });
@@ -1356,6 +1752,23 @@
       const conv = conversations.find((c) => sameId(c.id, id));
       if (conv) conv.unread = 0;
       renderConversations();
+
+      // Privacy-filtered profile (avatar / about / last seen) for the header.
+      try {
+        const { profile } = await apiGet('/api/profile/' + id);
+        if (profile && sameId(currentContactId, id)) {
+          applyPersonUpdate(id, {
+            avatar_url: profile.avatar_url || null,
+            avatar: profile.avatar_url || null,
+            about: profile.about || null,
+            online: !!profile.is_online,
+            last_seen: profile.last_seen || null,
+            display_name: profile.display_name,
+          });
+        }
+      } catch (err) {
+        console.warn('[chat] profile fetch failed', err);
+      }
 
       threadBody.innerHTML = '<div class="empty-hint">Loading messages…</div>';
       renderedMessageIds.clear();
@@ -1618,12 +2031,25 @@
         b.classList.toggle('active', b.dataset.tab === tab);
       });
       const sidebar = document.querySelector('.sidebar');
+      const layout = document.getElementById('layout');
+      sidebar.classList.remove('show-calls', 'show-settings');
+      layout.classList.toggle('in-settings', tab === 'settings');
       if (tab === 'calls') {
         sidebar.classList.add('show-calls');
         loadCallHistory();
-      } else {
-        sidebar.classList.remove('show-calls');
+      } else if (tab === 'settings') {
+        sidebar.classList.add('show-settings');
+        loadSettingsPanel();
       }
+    }
+
+    function scrollToSettingsSection(sectionId) {
+      const el = document.getElementById(sectionId);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.querySelectorAll('.settings-nav-item').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.settingsSection === sectionId);
+      });
     }
 
     async function loadCallHistory() {
@@ -1650,10 +2076,7 @@
       if (activeRailTab === 'calls') loadCallHistory();
       if (currentContactId != null) {
         const p = personById(currentContactId);
-        if (p) {
-          document.getElementById('thread-status').textContent =
-            p.online ? 'online' : (p.last_seen ? 'last seen ' + timeLabel(p.last_seen) : 'offline');
-        }
+        if (p) updateThreadHeader(p);
       }
     }
 
@@ -1662,6 +2085,379 @@
       me = user;
       paintAvatar(document.getElementById('my-avatar'), user);
     }
+
+    // ----- Settings panel (profile + privacy) -----
+    const ABOUT_MAX = 139;
+    const PRIVACY_FIELDS = ['avatar', 'about', 'last_seen', 'status'];
+    let myProfile = null;
+    let settingsBusy = false;
+    let aboutDirty = false;
+    let nameDirty = false;
+
+    function formatMemberSince(iso) {
+      const d = parseDate(iso);
+      if (!d) return '—';
+      return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    function setFeedback(el, message, kind) {
+      if (!el) return;
+      el.textContent = message || '';
+      el.classList.remove('error', 'ok');
+      if (kind) el.classList.add(kind);
+    }
+
+    function applyProfileToSettingsUI(profile) {
+      myProfile = profile;
+      if (!profile) return;
+
+      const person = {
+        display_name: profile.display_name,
+        email: profile.email,
+        avatar_url: profile.avatar_url,
+      };
+      paintAvatar(document.getElementById('settings-avatar'), person);
+      paintAvatar(document.getElementById('my-avatar'), person);
+      paintAvatar(document.getElementById('settings-preview-avatar'), person);
+      if (me) {
+        me.avatar_url = profile.avatar_url;
+        me.display_name = profile.display_name;
+        me.about = profile.about;
+      }
+
+      document.getElementById('settings-preview-name').textContent = profile.display_name || '—';
+      document.getElementById('settings-preview-email').textContent = profile.email || '';
+      document.getElementById('settings-email').textContent = profile.email || '—';
+      document.getElementById('settings-remove-photo').hidden = !profile.avatar_url;
+
+      const nameInput = document.getElementById('settings-display-name');
+      if (!nameDirty) {
+        nameInput.value = profile.display_name || '';
+      }
+
+      const authEl = document.getElementById('settings-auth-method');
+      if (profile.google_linked) {
+        authEl.innerHTML = '<span class="settings-account-badge">Google</span>';
+      } else {
+        authEl.textContent = 'Email & password';
+      }
+      document.getElementById('settings-member-since').textContent =
+        formatMemberSince(profile.created_at);
+
+      const aboutInput = document.getElementById('settings-about');
+      if (!aboutDirty) {
+        aboutInput.value = profile.about || '';
+        updateAboutCount();
+      }
+
+      const privacy = profile.privacy || {};
+      const exceptions = profile.privacy_exceptions || {};
+      for (const field of PRIVACY_FIELDS) {
+        const select = document.getElementById('privacy-' + field);
+        if (!select) continue;
+        select.value = privacy[field] || 'everyone';
+        renderPrivacyExceptions(field, exceptions[field] || []);
+        togglePrivacyExceptions(field);
+      }
+    }
+
+    function updateAboutCount() {
+      const input = document.getElementById('settings-about');
+      const count = document.getElementById('settings-about-count');
+      const n = (input.value || '').length;
+      count.textContent = String(n);
+      count.parentElement.classList.toggle('warn', n >= ABOUT_MAX);
+    }
+
+    function renderPrivacyExceptions(field, selectedIds) {
+      const box = document.getElementById('privacy-exceptions-' + field);
+      if (!box) return;
+      const selected = new Set((selectedIds || []).map(Number));
+      if (!contacts.length) {
+        box.innerHTML = '<div class="ex-empty">No contacts yet. Add people first.</div>';
+        return;
+      }
+      box.innerHTML = '';
+      contacts.forEach((c) => {
+        const row = document.createElement('label');
+        row.className = 'ex-item';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = String(c.id);
+        cb.checked = selected.has(Number(c.id));
+        cb.dataset.field = field;
+        const span = document.createElement('span');
+        span.textContent = c.display_name || c.email || ('User ' + c.id);
+        row.appendChild(cb);
+        row.appendChild(span);
+        box.appendChild(row);
+      });
+    }
+
+    function togglePrivacyExceptions(field) {
+      const select = document.getElementById('privacy-' + field);
+      const box = document.getElementById('privacy-exceptions-' + field);
+      if (!select || !box) return;
+      box.classList.toggle('show', select.value === 'contacts_except');
+    }
+
+    function getExceptionIds(field) {
+      const box = document.getElementById('privacy-exceptions-' + field);
+      if (!box) return [];
+      return Array.from(box.querySelectorAll('input[type="checkbox"]:checked'))
+        .map((el) => Number(el.value))
+        .filter((id) => Number.isInteger(id));
+    }
+
+    async function loadSettingsPanel() {
+      setFeedback(document.getElementById('settings-avatar-feedback'), '');
+      setFeedback(document.getElementById('settings-about-feedback'), '');
+      setFeedback(document.getElementById('settings-name-feedback'), '');
+      setFeedback(document.getElementById('settings-privacy-feedback'), '');
+      aboutDirty = false;
+      nameDirty = false;
+      try {
+        // Refresh contacts for exception lists (same endpoint as chat list).
+        const [profileRes, contactsRes] = await Promise.all([
+          apiGet('/api/profile/me'),
+          apiGet('/api/contacts'),
+        ]);
+        contacts = contactsRes.contacts || contacts;
+        applyProfileToSettingsUI(profileRes.profile);
+      } catch (err) {
+        console.error('[settings] load failed', err);
+        setFeedback(
+          document.getElementById('settings-avatar-feedback'),
+          'Could not load profile.',
+          'error'
+        );
+      }
+    }
+
+    async function uploadSettingsAvatar(file) {
+      const wrap = document.getElementById('settings-avatar-wrap');
+      const feedback = document.getElementById('settings-avatar-feedback');
+      const previousUrl = myProfile && myProfile.avatar_url;
+
+      // Local preview while uploading.
+      const reader = new FileReader();
+      reader.onload = () => {
+        const el = document.getElementById('settings-avatar');
+        el.style.backgroundImage = `url("${reader.result}")`;
+        el.style.backgroundSize = 'cover';
+        el.style.backgroundPosition = 'center';
+        el.textContent = '';
+      };
+      reader.readAsDataURL(file);
+
+      wrap.classList.add('loading');
+      settingsBusy = true;
+      setFeedback(feedback, 'Uploading…');
+
+      try {
+        const form = new FormData();
+        form.append('avatar', file);
+        const res = await fetch('/api/profile/avatar', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + token },
+          body: form,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401) { clearSession(); location.href = '/'; return; }
+        if (!res.ok) {
+          throw new Error(data.error || 'Upload failed');
+        }
+        applyProfileToSettingsUI(data.profile);
+        setFeedback(feedback, 'Photo updated.', 'ok');
+      } catch (err) {
+        console.error('[settings] avatar upload failed', err);
+        // Revert preview to last known avatar / initials.
+        paintAvatar(document.getElementById('settings-avatar'), {
+          display_name: (myProfile && myProfile.display_name) || (me && me.display_name),
+          email: (myProfile && myProfile.email) || (me && me.email),
+          avatar_url: previousUrl || null,
+        });
+        setFeedback(feedback, err.message || 'Upload failed.', 'error');
+      } finally {
+        wrap.classList.remove('loading');
+        settingsBusy = false;
+      }
+    }
+
+    async function removeSettingsAvatar() {
+      const feedback = document.getElementById('settings-avatar-feedback');
+      const wrap = document.getElementById('settings-avatar-wrap');
+      wrap.classList.add('loading');
+      settingsBusy = true;
+      setFeedback(feedback, 'Removing…');
+      try {
+        const r = await apiDelete('/api/profile/avatar');
+        if (r.status >= 400) throw new Error(r.data.error || 'Could not remove photo');
+        applyProfileToSettingsUI(r.data.profile);
+        setFeedback(feedback, 'Photo removed.', 'ok');
+      } catch (err) {
+        console.error('[settings] remove avatar failed', err);
+        setFeedback(feedback, err.message || 'Could not remove photo.', 'error');
+      } finally {
+        wrap.classList.remove('loading');
+        settingsBusy = false;
+      }
+    }
+
+    async function saveDisplayName() {
+      const input = document.getElementById('settings-display-name');
+      const feedback = document.getElementById('settings-name-feedback');
+      let displayName = (input.value || '').trim();
+      if (displayName.length > 64) displayName = displayName.slice(0, 64);
+      const current = (myProfile && myProfile.display_name) || '';
+      if (displayName === current) {
+        nameDirty = false;
+        return;
+      }
+      if (!displayName) {
+        setFeedback(feedback, 'Display name cannot be empty.', 'error');
+        input.value = current;
+        nameDirty = false;
+        return;
+      }
+      setFeedback(feedback, 'Saving…');
+      try {
+        const r = await apiPatch('/api/profile/name', { displayName });
+        if (r.status >= 400) throw new Error(r.data.error || 'Could not save name');
+        nameDirty = false;
+        applyProfileToSettingsUI(r.data.profile);
+        setFeedback(feedback, 'Name saved.', 'ok');
+      } catch (err) {
+        console.error('[settings] name save failed', err);
+        setFeedback(feedback, err.message || 'Could not save name.', 'error');
+      }
+    }
+
+    async function saveAbout() {
+      const input = document.getElementById('settings-about');
+      const feedback = document.getElementById('settings-about-feedback');
+      let about = (input.value || '').trim();
+      if (about.length > ABOUT_MAX) about = about.slice(0, ABOUT_MAX);
+      const current = (myProfile && myProfile.about) || '';
+      if (about === current) {
+        aboutDirty = false;
+        return;
+      }
+      setFeedback(feedback, 'Saving…');
+      try {
+        const r = await apiPatch('/api/profile/about', { about });
+        if (r.status >= 400) throw new Error(r.data.error || 'Could not save about');
+        aboutDirty = false;
+        applyProfileToSettingsUI(r.data.profile);
+        setFeedback(feedback, 'About saved.', 'ok');
+      } catch (err) {
+        console.error('[settings] about save failed', err);
+        setFeedback(feedback, err.message || 'Could not save about.', 'error');
+      }
+    }
+
+    async function savePrivacy(field) {
+      const select = document.getElementById('privacy-' + field);
+      const feedback = document.getElementById('settings-privacy-feedback');
+      if (!select) return;
+      const value = select.value;
+      const exceptions = value === 'contacts_except' ? getExceptionIds(field) : [];
+      setFeedback(feedback, 'Saving privacy…');
+      try {
+        const r = await apiPatch('/api/profile/privacy', { field, value, exceptions });
+        if (r.status >= 400) throw new Error(r.data.error || 'Could not update privacy');
+        applyProfileToSettingsUI(r.data.profile);
+        setFeedback(feedback, 'Privacy updated.', 'ok');
+      } catch (err) {
+        console.error('[settings] privacy save failed', err);
+        setFeedback(feedback, err.message || 'Could not update privacy.', 'error');
+      }
+    }
+
+    // Settings UI events
+    document.getElementById('settings-change-photo').addEventListener('click', () => {
+      if (settingsBusy) return;
+      document.getElementById('settings-avatar-input').click();
+    });
+    document.getElementById('settings-avatar-input').addEventListener('change', () => {
+      const input = document.getElementById('settings-avatar-input');
+      const file = input.files && input.files[0];
+      input.value = '';
+      if (!file) return;
+      if (!/^image\/(jpeg|png|webp)$/i.test(file.type) && !file.type.startsWith('image/')) {
+        setFeedback(document.getElementById('settings-avatar-feedback'), 'Choose a JPEG, PNG, or WebP image.', 'error');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setFeedback(document.getElementById('settings-avatar-feedback'), 'Image must be 5MB or smaller.', 'error');
+        return;
+      }
+      uploadSettingsAvatar(file);
+    });
+    document.getElementById('settings-remove-photo').addEventListener('click', () => {
+      if (settingsBusy) return;
+      if (!confirm('Remove your profile photo?')) return;
+      removeSettingsAvatar();
+    });
+
+    const nameInput = document.getElementById('settings-display-name');
+    nameInput.addEventListener('input', () => {
+      nameDirty = true;
+      if (nameInput.value.length > 64) nameInput.value = nameInput.value.slice(0, 64);
+      setFeedback(document.getElementById('settings-name-feedback'), '');
+    });
+    nameInput.addEventListener('blur', () => {
+      if (nameDirty) saveDisplayName();
+    });
+
+    const aboutInput = document.getElementById('settings-about');
+    aboutInput.addEventListener('input', () => {
+      aboutDirty = true;
+      if (aboutInput.value.length > ABOUT_MAX) {
+        aboutInput.value = aboutInput.value.slice(0, ABOUT_MAX);
+      }
+      updateAboutCount();
+      setFeedback(document.getElementById('settings-about-feedback'), '');
+    });
+    aboutInput.addEventListener('blur', () => {
+      if (aboutDirty) saveAbout();
+    });
+
+    PRIVACY_FIELDS.forEach((field) => {
+      const select = document.getElementById('privacy-' + field);
+      if (!select) return;
+      select.addEventListener('change', () => {
+        togglePrivacyExceptions(field);
+        if (select.value === 'contacts_except') {
+          const existing =
+            (myProfile && myProfile.privacy_exceptions && myProfile.privacy_exceptions[field]) || [];
+          renderPrivacyExceptions(field, existing);
+          togglePrivacyExceptions(field);
+        }
+        savePrivacy(field);
+      });
+      const box = document.getElementById('privacy-exceptions-' + field);
+      if (box) {
+        box.addEventListener('change', (e) => {
+          if (e.target && e.target.matches('input[type="checkbox"]')) {
+            savePrivacy(field);
+          }
+        });
+      }
+    });
+
+    document.querySelectorAll('.settings-nav-item').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        scrollToSettingsSection(btn.dataset.settingsSection);
+      });
+    });
+
+    document.getElementById('settings-logout').addEventListener('click', () => {
+      if (confirm('Log out?')) {
+        clearSession();
+        location.href = '/';
+      }
+    });
 
     async function addContactPrompt() {
       const email = prompt('Add a contact by email:');
@@ -1702,7 +2498,11 @@
     });
     document.getElementById('new-chat').addEventListener('click', addContactPrompt);
     document.getElementById('menu-btn').addEventListener('click', () => {
-      if (confirm('Log out?')) { clearSession(); location.href = '/'; }
+      setRailTab('settings');
+    });
+    document.getElementById('my-avatar').closest('.avatar-wrap').style.cursor = 'pointer';
+    document.getElementById('my-avatar').closest('.avatar-wrap').addEventListener('click', () => {
+      setRailTab('settings');
     });
     document.getElementById('thread-back').addEventListener('click', () => {
       socket.emit('chat:open', { contactId: null });
@@ -1721,7 +2521,7 @@
       btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
         if (tab === 'people') { addContactPrompt(); return; }
-        if (tab === 'chats' || tab === 'calls') {
+        if (tab === 'chats' || tab === 'calls' || tab === 'settings') {
           setRailTab(tab);
           return;
         }
@@ -2197,23 +2997,51 @@
       if (activeRailTab === 'calls') loadCallHistory();
     });
 
-    socket.on('presence:update', ({ userId, online, lastSeen }) => {
-      const contact = contacts.find((c) => sameId(c.id, userId));
-      if (contact) {
-        contact.online = online;
-        contact.last_seen = lastSeen;
+    // Live profile / presence updates (Parts 2–4).
+    socket.on('profile:updated', (payload) => {
+      console.log('[socket] profile:updated', payload);
+      if (!payload || payload.userId == null) return;
+
+      // Own profile (other tabs / settings).
+      if (sameId(payload.userId, me && me.id)) {
+        if (payload.avatar_url !== undefined && me) me.avatar_url = payload.avatar_url;
+        if (payload.about !== undefined && me) me.about = payload.about;
+        if (myProfile) {
+          if (payload.avatar_url !== undefined) myProfile.avatar_url = payload.avatar_url;
+          if (payload.about !== undefined) myProfile.about = payload.about;
+        }
+        paintAvatar(document.getElementById('my-avatar'), me || {});
+        if (activeRailTab === 'settings' && myProfile) {
+          applyProfileToSettingsUI({
+            ...myProfile,
+            avatar_url: payload.avatar_url !== undefined ? payload.avatar_url : myProfile.avatar_url,
+            about: payload.about !== undefined ? payload.about : myProfile.about,
+          });
+        }
+        return;
       }
-      const conv = conversations.find((c) => sameId(c.id, userId));
-      if (conv) {
-        conv.online = online;
-        conv.last_seen = lastSeen;
+
+      // Another contact: update list + open header in place (omit fields = privacy hide).
+      const fields = {};
+      if ('avatar_url' in payload) {
+        fields.avatar_url = payload.avatar_url || null;
+        fields.avatar = payload.avatar_url || null;
       }
-      renderOnline();
-      renderConversations();
-      if (sameId(currentContactId, userId)) {
-        document.getElementById('thread-status').textContent =
-          online ? 'online' : (lastSeen ? 'last seen ' + timeLabel(lastSeen) : 'offline');
+      if ('about' in payload) {
+        fields.about = payload.about || null;
       }
+      applyPersonUpdate(payload.userId, fields);
+    });
+
+    socket.on('presence:update', ({ userId, online, lastSeen, last_seen_at }) => {
+      console.log('[socket] presence:update', { userId, online, lastSeen, last_seen_at });
+      // Receiving this event means the server already allowed last-seen privacy.
+      const seen = lastSeen != null ? lastSeen : (last_seen_at != null ? last_seen_at : null);
+      applyPersonUpdate(userId, {
+        online: !!online,
+        last_seen: seen,
+        last_seen_at: seen,
+      });
     });
 
     socket.on('unread:update', ({ contactId, count }) => {
