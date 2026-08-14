@@ -12,9 +12,39 @@ const express = require('express');
 const db = require('./db');
 const presence = require('./presence');
 const { requireAuth } = require('./auth');
+const { visibleProfileFor } = require('./profile');
 
 const router = express.Router();
 router.use(requireAuth);
+
+// Apply privacy to a contact/conversation row for the logged-in viewer.
+function publicContactFields(viewerId, ownerId, base = {}) {
+  const owner = db.getUserById(ownerId);
+  if (!owner) {
+    return {
+      ...base,
+      avatar: null,
+      avatar_url: null,
+      about: null,
+      online: false,
+      last_seen: null,
+    };
+  }
+  const visible = visibleProfileFor(viewerId, owner);
+  // Single source for online: live presence map when last-seen is visible,
+  // otherwise force offline so we never leak presence via REST.
+  const online = visible.last_seen_hidden
+    ? false
+    : presence.isOnline(ownerId);
+  return {
+    ...base,
+    avatar: visible.avatar_url || null,
+    avatar_url: visible.avatar_url || null,
+    about: visible.about || null,
+    online,
+    last_seen: visible.last_seen || null,
+  };
+}
 
 // ---------- Contacts ----------
 
@@ -38,29 +68,28 @@ router.post('/contacts', (req, res) => {
   }
 
   db.addContact(req.user.id, target.id);
+  const fields = publicContactFields(req.user.id, target.id, {
+    id: target.id,
+    email: target.email,
+    display_name: target.display_name,
+  });
   res.status(201).json({
-    contact: {
-      id: target.id,
-      email: target.email,
-      display_name: target.display_name,
-      online: presence.isOnline(target.id),
-    },
+    contact: fields,
   });
 });
 
 // GET /api/contacts
 // List my contacts, each tagged with their current online/offline status.
 router.get('/contacts', (req, res) => {
-  const contacts = db.getContacts(req.user.id).map((c) => ({
-    id: c.id,
-    email: c.email,
-    display_name: c.display_name,
-    avatar: c.avatar_url,
-    added_at: c.added_at,
-    online: presence.isOnline(c.id),
-    last_seen: c.last_seen,
-    unread: c.unread,
-  }));
+  const contacts = db.getContacts(req.user.id).map((c) =>
+    publicContactFields(req.user.id, c.id, {
+      id: c.id,
+      email: c.email,
+      display_name: c.display_name,
+      added_at: c.added_at,
+      unread: c.unread,
+    })
+  );
   res.json({ contacts });
 });
 
@@ -70,25 +99,24 @@ router.get('/contacts', (req, res) => {
 // and how many unread messages they've sent me. Newest conversation first.
 router.get('/conversations', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  const conversations = db.getConversations(req.user.id).map((c) => ({
-    id: c.contact_id,
-    name: c.display_name,
-    email: c.email,
-    avatar: c.avatar_url,
-    online: presence.isOnline(c.contact_id),
-    last_seen: c.last_seen,
-    unread: c.unread,
-    last_message: {
-      text: c.last_text,
-      created_at: c.last_at,
-      from_me: c.last_sender_id === req.user.id,
-      status: c.last_status,
-      message_type: c.last_message_type || 'text',
-      file_name: c.last_file_name || null,
-    },
-    // kept for backwards-compat with the dashboard rendering
-    display_name: c.display_name,
-  }));
+  const conversations = db.getConversations(req.user.id).map((c) => {
+    const fields = publicContactFields(req.user.id, c.contact_id, {
+      id: c.contact_id,
+      name: c.display_name,
+      email: c.email,
+      display_name: c.display_name,
+      unread: c.unread,
+      last_message: {
+        text: c.last_text,
+        created_at: c.last_at,
+        from_me: c.last_sender_id === req.user.id,
+        status: c.last_status,
+        message_type: c.last_message_type || 'text',
+        file_name: c.last_file_name || null,
+      },
+    });
+    return fields;
+  });
   res.json({ conversations });
 });
 

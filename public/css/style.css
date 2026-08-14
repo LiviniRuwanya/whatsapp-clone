@@ -547,6 +547,35 @@ body {
 
 .social-btn:hover { border-color: #c9c9dc; background: #fafaff; }
 
+.google-signin-slot {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+}
+
+.google-signin-slot > div {
+  width: 100% !important;
+}
+
+.google-signin-fallback {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid #e4e4ee;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  color: #8a8ea3;
+  cursor: not-allowed;
+}
+
 .auth2-divider {
   display: flex;
   align-items: center;
