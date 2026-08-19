@@ -40,6 +40,11 @@ api.groupEvents.on('added', ({ group, userId }) => {
   io.to(`group:${group.groupId}`).emit('group:updated', { group });
 });
 
+api.groupEvents.on('updated', ({ group }) => {
+  if (!group) return;
+  io.to(`group:${group.groupId}`).emit('group:updated', { groupId: group.groupId, group });
+});
+
 api.groupEvents.on('removed', ({ groupId, userId }) => {
   socketsForUser(userId).forEach((socket) => {
     socket.leave(`group:${groupId}`);
