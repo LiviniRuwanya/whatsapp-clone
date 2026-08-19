@@ -319,6 +319,50 @@
     }
     .people-row-status.offline { color: var(--muted); font-weight: 500; }
 
+    .groups-panel { display: none; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; }
+    .sidebar.show-groups .online-section,
+    .sidebar.show-groups .conv-list,
+    .sidebar.show-groups .search,
+    .sidebar.show-groups .call-list,
+    .sidebar.show-groups .people-panel,
+    .sidebar.show-groups .sidebar-panel-title { display: none; }
+    .sidebar.show-groups .groups-panel { display: flex; }
+    .groups-head { display: flex; align-items: center; gap: 10px; padding: 16px 16px 12px; border-bottom: 1px solid var(--line); flex: 0 0 auto; }
+    .groups-head-icon { width: 38px; height: 38px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(135deg, var(--indigo), var(--indigo-deep)); flex: none; }
+    .groups-head-copy { min-width: 0; flex: 1; }
+    .groups-head h2 { font-size: 17px; font-weight: 800; color: var(--ink); }
+    .groups-head p { margin-top: 2px; font-size: 12px; color: var(--muted); }
+    .groups-create { display: flex; flex-direction: column; gap: 12px; padding: 14px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, #faf9ff 0%, #fff 100%); flex: 0 0 auto; }
+    .groups-field-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--muted); }
+    .groups-name-input, .groups-member-search { width: 100%; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; outline: none; color: var(--ink); background: #fff; font-size: 14px; }
+    .groups-member-search { margin-top: 0; font-size: 13px; }
+    .groups-name-input:focus, .groups-member-search:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px rgba(109,94,252,.12); }
+    .groups-selected { display: flex; flex-wrap: wrap; gap: 6px; min-height: 26px; }
+    .groups-selected:empty::before { content: 'No members selected yet'; font-size: 12px; color: var(--muted); padding: 5px 0; }
+    .group-member-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 4px 8px 4px 5px; border-radius: 999px; background: #efeafe; color: var(--indigo-deep); font-size: 12px; font-weight: 700; }
+    .group-member-chip button { border: none; background: none; color: inherit; cursor: pointer; font-size: 16px; line-height: 1; padding: 0; }
+    .groups-contact-list { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; }
+    .group-contact-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: none; border-radius: 11px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+    .group-contact-row:hover { background: #f6f5fd; }
+    .group-contact-row.selected { background: #efeafe; }
+    .group-contact-copy { flex: 1; min-width: 0; }
+    .group-contact-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .group-contact-email { margin-top: 2px; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .group-check { width: 20px; height: 20px; border: 1px solid #c7c5d7; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; flex: none; }
+    .group-contact-row.selected .group-check { border-color: var(--indigo); background: var(--indigo); }
+    .groups-footer { padding: 10px 14px 14px; border-top: 1px solid var(--line); flex: 0 0 auto; }
+    .groups-create-btn { width: 100%; padding: 11px; border: none; border-radius: 10px; background: linear-gradient(135deg, var(--indigo), var(--indigo-deep)); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .groups-create-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .groups-feedback { min-height: 16px; margin-bottom: 7px; font-size: 12px; color: #dc2626; }
+    .groups-feedback.ok { color: #16a34a; }
+    .group-list { display: none; flex: 1; min-height: 0; overflow-y: auto; padding: 8px; }
+    .group-list.has-groups { display: block; }
+    .group-card { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 11px; background: #f7f6fd; margin-bottom: 6px; }
+    .group-card-icon { width: 38px; height: 38px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(135deg, var(--indigo), var(--indigo-deep)); flex: none; }
+    .group-card-copy { min-width: 0; }
+    .group-card-name { font-size: 14px; font-weight: 750; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .group-card-meta { margin-top: 2px; font-size: 11px; color: var(--muted); }
+
     /* Add contact modal (quick add from pencil) */
     .add-contact-modal {
       display: none;
@@ -1074,6 +1118,31 @@
         <div class="people-list" id="people-list"><div class="empty-hint">Loading…</div></div>
       </div>
 
+      <div class="groups-panel" id="groups-panel">
+        <div class="groups-head">
+          <div class="groups-head-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a6 6 0 0 1 12 0v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a6 6 0 0 0-3-5.19"/></svg>
+          </div>
+          <div class="groups-head-copy">
+            <h2>Create a group</h2>
+            <p>Bring your people together</p>
+          </div>
+        </div>
+        <form class="groups-create" id="groups-create-form" autocomplete="off">
+          <label class="groups-field-label" for="group-name">GROUP NAME</label>
+          <input class="groups-name-input" id="group-name" type="text" maxlength="50" placeholder="e.g. Weekend plans" />
+          <div class="groups-field-label">ADD MEMBERS <span id="group-member-count">(0)</span></div>
+          <div class="groups-selected" id="groups-selected" aria-live="polite"></div>
+          <input class="groups-member-search" id="groups-member-search" type="search" placeholder="Search your contacts..." autocomplete="off" />
+        </form>
+        <div class="groups-contact-list" id="groups-contact-list"><div class="empty-hint">Loading contacts...</div></div>
+        <div class="group-list" id="group-list" aria-label="Your groups"></div>
+        <div class="groups-footer">
+          <div class="groups-feedback" id="groups-feedback" aria-live="polite"></div>
+          <button class="groups-create-btn" id="groups-create-btn" type="submit" form="groups-create-form" disabled>Create group</button>
+        </div>
+      </div>
+
       <div class="settings-sidebar-preview" id="settings-sidebar-preview">
         <div class="settings-preview-card">
           <div class="avatar" id="settings-preview-avatar"></div>
@@ -1498,6 +1567,9 @@
     let callHistory = [];
     let filter = '';
     let peopleFilter = '';
+    let groupMemberFilter = '';
+    let selectedGroupMemberIds = new Set();
+    let groups = [];
     let currentContactId = null; // numeric user id of the open chat
     let activeRailTab = 'chats';
     const renderedMessageIds = new Set();
@@ -2196,6 +2268,112 @@
       });
     }
 
+    function loadLocalGroups() {
+      try {
+        const saved = JSON.parse(localStorage.getItem('chatconnect-groups') || '[]');
+        groups = Array.isArray(saved) ? saved : [];
+      } catch (_) {
+        groups = [];
+      }
+    }
+
+    function saveLocalGroups() {
+      localStorage.setItem('chatconnect-groups', JSON.stringify(groups));
+    }
+
+    function groupMemberName(contact) {
+      return contact.display_name || contact.name || contact.email || 'Contact';
+    }
+
+    function renderGroups() {
+      const contactList = document.getElementById('groups-contact-list');
+      const selectedList = document.getElementById('groups-selected');
+      const groupList = document.getElementById('group-list');
+      const count = document.getElementById('group-member-count');
+      const query = groupMemberFilter.trim().toLowerCase();
+      const matchingContacts = contacts.filter((contact) => {
+        const name = groupMemberName(contact).toLowerCase();
+        const email = (contact.email || '').toLowerCase();
+        return !query || name.includes(query) || email.includes(query);
+      });
+
+      selectedList.innerHTML = '';
+      contacts.filter((contact) => selectedGroupMemberIds.has(String(contact.id))).forEach((contact) => {
+        const chip = document.createElement('span');
+        chip.className = 'group-member-chip';
+        chip.textContent = groupMemberName(contact);
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.title = 'Remove ' + groupMemberName(contact);
+        remove.setAttribute('aria-label', 'Remove ' + groupMemberName(contact));
+        remove.textContent = '×';
+        remove.dataset.removeGroupMember = String(contact.id);
+        chip.appendChild(remove);
+        selectedList.appendChild(chip);
+      });
+      count.textContent = '(' + selectedGroupMemberIds.size + ')';
+
+      contactList.innerHTML = '';
+      if (!contacts.length) {
+        contactList.innerHTML = '<div class="empty-hint">Add contacts first, then you can invite them to a group.</div>';
+      } else if (!matchingContacts.length) {
+        contactList.innerHTML = '<div class="empty-hint">No contacts match your search.</div>';
+      } else {
+        matchingContacts.forEach((contact) => {
+          const id = String(contact.id);
+          const row = document.createElement('button');
+          row.type = 'button';
+          row.className = 'group-contact-row' + (selectedGroupMemberIds.has(id) ? ' selected' : '');
+          row.dataset.groupMemberId = id;
+          row.setAttribute('aria-pressed', selectedGroupMemberIds.has(id) ? 'true' : 'false');
+          row.appendChild(avatarNode(contact, 'lg'));
+          const copy = document.createElement('span');
+          copy.className = 'group-contact-copy';
+          const name = document.createElement('span');
+          name.className = 'group-contact-name';
+          name.textContent = groupMemberName(contact);
+          const email = document.createElement('span');
+          email.className = 'group-contact-email';
+          email.textContent = contact.email || (contact.online ? 'Online' : '');
+          copy.appendChild(name);
+          copy.appendChild(email);
+          row.appendChild(copy);
+          const check = document.createElement('span');
+          check.className = 'group-check';
+          check.textContent = selectedGroupMemberIds.has(id) ? '✓' : '';
+          row.appendChild(check);
+          contactList.appendChild(row);
+        });
+      }
+
+      groupList.innerHTML = '';
+      groupList.classList.toggle('has-groups', groups.length > 0);
+      groups.forEach((group) => {
+        const card = document.createElement('div');
+        card.className = 'group-card';
+        card.innerHTML = '<div class="group-card-icon"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a6 6 0 0 1 12 0v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a6 6 0 0 0-3-5.19"/></svg></div>';
+        const copy = document.createElement('div');
+        copy.className = 'group-card-copy';
+        copy.innerHTML = '<div class="group-card-name"></div><div class="group-card-meta"></div>';
+        copy.querySelector('.group-card-name').textContent = group.name;
+        copy.querySelector('.group-card-meta').textContent = group.memberIds.length + ' member' + (group.memberIds.length === 1 ? '' : 's');
+        card.appendChild(copy);
+        groupList.appendChild(card);
+      });
+
+      document.getElementById('groups-create-btn').disabled =
+        !document.getElementById('group-name').value.trim() || selectedGroupMemberIds.size === 0;
+    }
+
+    function resetGroupForm() {
+      selectedGroupMemberIds = new Set();
+      groupMemberFilter = '';
+      document.getElementById('group-name').value = '';
+      document.getElementById('groups-member-search').value = '';
+      document.getElementById('groups-feedback').textContent = '';
+      renderGroups();
+    }
+
     function renderConversations() {
       const list = document.getElementById('conv-list');
       const q = filter.trim().toLowerCase();
@@ -2352,7 +2530,7 @@
       });
       const sidebar = document.querySelector('.sidebar');
       const layout = document.getElementById('layout');
-      sidebar.classList.remove('show-calls', 'show-settings', 'show-people');
+      sidebar.classList.remove('show-calls', 'show-settings', 'show-people', 'show-groups');
       layout.classList.toggle('in-settings', tab === 'settings');
       if (tab === 'calls') {
         sidebar.classList.add('show-calls');
@@ -2363,6 +2541,9 @@
       } else if (tab === 'people') {
         sidebar.classList.add('show-people');
         renderContactsList();
+      } else if (tab === 'groups') {
+        sidebar.classList.add('show-groups');
+        renderGroups();
       }
     }
 
@@ -2397,6 +2578,7 @@
       renderOnline();
       renderConversations();
       if (activeRailTab === 'people') renderContactsList();
+      if (activeRailTab === 'groups') renderGroups();
       if (activeRailTab === 'calls') loadCallHistory();
       if (currentContactId != null) {
         const p = personById(currentContactId);
@@ -2902,6 +3084,50 @@
       renderContactsList();
     });
 
+    document.getElementById('groups-member-search').addEventListener('input', (e) => {
+      groupMemberFilter = e.target.value;
+      renderGroups();
+    });
+    document.getElementById('group-name').addEventListener('input', () => {
+      document.getElementById('groups-feedback').textContent = '';
+      renderGroups();
+    });
+    document.getElementById('groups-contact-list').addEventListener('click', (e) => {
+      const row = e.target.closest('[data-group-member-id]');
+      if (!row) return;
+      const id = String(row.dataset.groupMemberId);
+      if (selectedGroupMemberIds.has(id)) selectedGroupMemberIds.delete(id);
+      else selectedGroupMemberIds.add(id);
+      renderGroups();
+    });
+    document.getElementById('groups-selected').addEventListener('click', (e) => {
+      const remove = e.target.closest('[data-remove-group-member]');
+      if (!remove) return;
+      selectedGroupMemberIds.delete(String(remove.dataset.removeGroupMember));
+      renderGroups();
+    });
+    document.getElementById('groups-create-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('group-name').value.trim();
+      const feedback = document.getElementById('groups-feedback');
+      if (!name) {
+        feedback.textContent = 'Give your group a name first.';
+        document.getElementById('group-name').focus();
+        return;
+      }
+      if (!selectedGroupMemberIds.size) {
+        feedback.textContent = 'Choose at least one person to add.';
+        return;
+      }
+      groups.unshift({ name, memberIds: Array.from(selectedGroupMemberIds), createdAt: Date.now() });
+      saveLocalGroups();
+      feedback.className = 'groups-feedback';
+      feedback.textContent = 'Group created. You can start chatting with your members soon.';
+      resetGroupForm();
+      feedback.className = 'groups-feedback ok';
+      feedback.textContent = 'Group created. You can start chatting with your members soon.';
+    });
+
     // ----- UI events -----
     // Event delegation so clicks still work after list re-renders.
     document.getElementById('conv-list').addEventListener('click', (e) => {
@@ -2949,7 +3175,7 @@
     document.querySelectorAll('.rail-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
-        if (tab === 'people') { setRailTab('people'); return; }
+        if (tab === 'people' || tab === 'groups') { setRailTab(tab); return; }
         if (tab === 'chats' || tab === 'calls' || tab === 'settings') {
           setRailTab(tab);
           return;
@@ -3489,6 +3715,7 @@
       }
     });
 
+    loadLocalGroups();
     loadMe().then(loadAll).then(() => {
       // Ensure chats sidebar (not calls) is visible on every fresh load.
       setRailTab('chats');
