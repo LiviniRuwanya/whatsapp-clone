@@ -750,6 +750,18 @@
     .thread-head .who { flex: 1; min-width: 0; }
     .thread-head .who .n { font-size: 15px; font-weight: 700; }
     .thread-head .who .s { font-size: 12px; color: var(--muted); }
+    .thread-contact-avatar { border: 0; padding: 0; cursor: pointer; }
+    .thread-contact-avatar:focus-visible { outline: 3px solid rgba(109,94,252,.35); outline-offset: 3px; }
+    .contact-profile-view { display: none; position: fixed; inset: 0; z-index: 1250; background: rgba(30,36,64,.45); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 20px; }
+    .contact-profile-view.show { display: flex; }
+    .contact-profile-card { position: relative; width: min(360px, 100%); padding: 28px 24px 24px; border-radius: 16px; background: #fff; box-shadow: 0 22px 60px rgba(30,36,64,.22); text-align: center; animation: modalIn .22s ease; }
+    .contact-profile-close { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border: 0; border-radius: 9px; background: #f3f2f8; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
+    .contact-profile-avatar { width: 112px; height: 112px; margin: 4px auto 14px; font-size: 32px; }
+    .contact-profile-name { color: var(--ink); font-size: 21px; font-weight: 800; }
+    .contact-profile-row { margin-top: 18px; text-align: left; }
+    .contact-profile-label { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .contact-profile-value { margin-top: 5px; color: var(--ink); font-size: 14px; line-height: 1.45; word-break: break-word; }
+    .contact-profile-value.empty { color: var(--muted); }
     .thread-body {
       grid-row: 2;
       min-height: 0;
@@ -1292,9 +1304,9 @@
           <button class="icon-btn thread-back" id="thread-back" title="Back">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
-          <div class="avatar-wrap" style="width:40px;height:40px;margin:0">
+          <button type="button" class="avatar-wrap thread-contact-avatar" id="thread-avatar-button" title="View contact profile" aria-label="View contact profile" style="width:40px;height:40px;margin:0">
             <div class="avatar" id="thread-avatar" style="width:40px;height:40px;font-size:15px"></div>
-          </div>
+          </button>
           <div class="who">
             <div class="n" id="thread-name"></div>
             <div class="s" id="thread-status"></div>
@@ -1334,6 +1346,22 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <div class="contact-profile-view" id="contact-profile-view" role="dialog" aria-modal="true" aria-labelledby="contact-profile-name">
+    <section class="contact-profile-card">
+      <button type="button" class="contact-profile-close" id="contact-profile-close" title="Close profile" aria-label="Close profile">×</button>
+      <div class="avatar contact-profile-avatar" id="contact-profile-avatar"></div>
+      <div class="contact-profile-name" id="contact-profile-name">Contact</div>
+      <div class="contact-profile-row">
+        <div class="contact-profile-label">About</div>
+        <div class="contact-profile-value" id="contact-profile-about">Loading…</div>
+      </div>
+      <div class="contact-profile-row">
+        <div class="contact-profile-label">Last seen</div>
+        <div class="contact-profile-value" id="contact-profile-last-seen">Loading…</div>
+      </div>
+    </section>
   </div>
 
   <!-- Quick add contact modal (pencil button) -->
@@ -1506,6 +1534,10 @@
 
     function updateThreadHeader(person) {
       if (!person) return;
+      const avatarButton = document.getElementById('thread-avatar-button');
+      avatarButton.disabled = currentContactId == null;
+      avatarButton.setAttribute('aria-label', currentContactId == null ? 'Group avatar' : 'View contact profile');
+      avatarButton.title = currentContactId == null ? 'Group avatar' : 'View contact profile';
       paintAvatar(document.getElementById('thread-avatar'), person);
       document.getElementById('thread-name').textContent =
         person.name || person.display_name || '';
@@ -1517,6 +1549,10 @@
 
     function updateGroupThreadHeader(group) {
       if (!group) return;
+      const avatarButton = document.getElementById('thread-avatar-button');
+      avatarButton.disabled = true;
+      avatarButton.setAttribute('aria-label', 'Group avatar');
+      avatarButton.title = 'Group avatar';
       paintAvatar(document.getElementById('thread-avatar'), {
         display_name: group.name,
         email: group.groupId || group.id,
@@ -1527,6 +1563,58 @@
       statusEl.textContent = count ? count + ' members' : '';
       statusEl.style.display = count ? '' : 'none';
       renderGroupManagement(group);
+    }
+
+    function closeContactProfile() {
+      document.getElementById('contact-profile-view').classList.remove('show');
+    }
+
+    async function openContactProfile() {
+      const contactId = currentContactId;
+      if (contactId == null) return;
+      const requestId = ++contactProfileRequestId;
+      const view = document.getElementById('contact-profile-view');
+      const about = document.getElementById('contact-profile-about');
+      const lastSeen = document.getElementById('contact-profile-last-seen');
+      const contact = personById(contactId) || {};
+      paintAvatar(document.getElementById('contact-profile-avatar'), contact);
+      document.getElementById('contact-profile-name').textContent = contact.display_name || contact.name || 'Contact';
+      about.textContent = 'Loading…';
+      lastSeen.textContent = 'Loading…';
+      about.classList.remove('empty');
+      lastSeen.classList.remove('empty');
+      view.classList.add('show');
+      try {
+        const result = await apiGet('/api/profile/' + encodeURIComponent(contactId) + '?_=' + Date.now());
+        if (requestId !== contactProfileRequestId || currentContactId !== contactId) return;
+        const profile = result.profile || {};
+        paintAvatar(document.getElementById('contact-profile-avatar'), profile);
+        document.getElementById('contact-profile-name').textContent = profile.display_name || 'Contact';
+        if (profile.about_hidden) {
+          about.textContent = 'About is hidden';
+        } else if (profile.about) {
+          about.textContent = profile.about;
+        } else {
+          about.textContent = 'No About information';
+          about.classList.add('empty');
+        }
+        if (profile.last_seen_hidden) {
+          lastSeen.textContent = 'Last seen is hidden';
+        } else if (profile.is_online) {
+          lastSeen.textContent = 'Online now';
+        } else if (profile.last_seen) {
+          lastSeen.textContent = 'Last seen ' + timeLabel(profile.last_seen);
+        } else {
+          lastSeen.textContent = 'Last seen unavailable';
+          lastSeen.classList.add('empty');
+        }
+      } catch (err) {
+        if (requestId !== contactProfileRequestId) return;
+        about.textContent = 'Could not load profile';
+        lastSeen.textContent = 'Could not load profile';
+        about.classList.add('empty');
+        lastSeen.classList.add('empty');
+      }
     }
 
     function renderGroupManagement(group) {
@@ -1652,6 +1740,7 @@
     let groups = [];
     let currentContactId = null; // numeric user id of the open chat
     let currentGroupId = null;
+    let contactProfileRequestId = 0;
     let activeRailTab = 'chats';
     const renderedMessageIds = new Set();
 
@@ -1745,6 +1834,8 @@
       threadEl.style.removeProperty('display');
       currentContactId = null;
       currentGroupId = null;
+      contactProfileRequestId++;
+      closeContactProfile();
       document.getElementById('group-management').classList.remove('show');
       messageInput.disabled = true;
       sendBtn.disabled = true;
@@ -2175,6 +2266,7 @@
         return;
       }
 
+      closeContactProfile();
       currentContactId = id;
   currentGroupId = null;
 
@@ -2230,6 +2322,7 @@
     async function selectGroup(rawGroupId) {
       const groupId = String(rawGroupId || '');
       if (!groupId) return;
+      closeContactProfile();
       currentGroupId = groupId;
       currentContactId = null;
       let group = groups.find((item) => String(item.groupId || item.id) === groupId);
@@ -3324,6 +3417,11 @@
       hideThreadPanel();
       renderConversations();
       setRailTab('groups');
+    });
+    document.getElementById('thread-avatar-button').addEventListener('click', openContactProfile);
+    document.getElementById('contact-profile-close').addEventListener('click', closeContactProfile);
+    document.getElementById('contact-profile-view').addEventListener('click', (e) => {
+      if (e.target.id === 'contact-profile-view') closeContactProfile();
     });
     document.getElementById('groups-create-form').addEventListener('submit', async (e) => {
       e.preventDefault();
