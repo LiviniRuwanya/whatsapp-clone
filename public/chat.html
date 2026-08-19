@@ -362,6 +362,19 @@
     .group-card-copy { min-width: 0; }
     .group-card-name { font-size: 14px; font-weight: 750; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .group-card-meta { margin-top: 2px; font-size: 11px; color: var(--muted); }
+    .group-management { display: none; padding: 10px 14px; border-bottom: 1px solid var(--line); background: #fff; }
+    .group-management.show { display: block; }
+    .group-management-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .group-management-title { font-size: 12px; font-weight: 800; color: var(--ink); }
+    .group-management-actions { display: flex; gap: 6px; }
+    .group-manage-btn { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: #fff; color: var(--indigo-deep); font-size: 11px; font-weight: 700; cursor: pointer; }
+    .group-manage-btn.danger { color: #dc2626; }
+    .group-members-list { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+    .group-member-item { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+    .group-member-item .avatar { width: 26px; height: 26px; font-size: 10px; }
+    .group-member-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .group-member-remove { border: 0; background: transparent; color: #dc2626; cursor: pointer; font-size: 11px; }
+    .group-sender-name { margin: 0 0 3px 2px; font-size: 11px; font-weight: 750; color: var(--indigo-deep); }
 
     /* Add contact modal (quick add from pencil) */
     .add-contact-modal {
@@ -1292,6 +1305,17 @@
             </button>
           </div>
         </div>
+        <div class="group-management" id="group-management">
+          <div class="group-management-head">
+            <div class="group-management-title" id="group-management-title">Group members</div>
+            <div class="group-management-actions">
+              <button type="button" class="group-manage-btn" id="group-add-member-btn">Add member</button>
+              <button type="button" class="group-manage-btn danger" id="group-leave-btn">Leave</button>
+              <button type="button" class="group-manage-btn danger" id="group-delete-btn">Delete</button>
+            </div>
+          </div>
+          <div class="group-members-list" id="group-members-list"></div>
+        </div>
         <div class="thread-body" id="thread-body"></div>
         <div class="upload-bar" id="upload-bar">
           <span id="upload-label">Uploading…</span>
@@ -1407,6 +1431,14 @@
       });
       return { status: res.status, data: await res.json().catch(() => ({})) };
     }
+    async function apiGroupDelete(path) {
+      const res = await fetch(path, {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer ' + token },
+      });
+      if (res.status === 401) { clearSession(); location.href = '/'; throw new Error('unauth'); }
+      return { status: res.status, data: await res.json().catch(() => ({})) };
+    }
     async function apiPatch(path, body) {
       const res = await fetch(path, {
         method: 'PATCH',
@@ -1481,6 +1513,54 @@
       const text = presenceStatusText(person);
       statusEl.textContent = text;
       statusEl.style.display = text ? '' : 'none';
+    }
+
+    function updateGroupThreadHeader(group) {
+      if (!group) return;
+      paintAvatar(document.getElementById('thread-avatar'), {
+        display_name: group.name,
+        email: group.groupId || group.id,
+      });
+      document.getElementById('thread-name').textContent = group.name;
+      const statusEl = document.getElementById('thread-status');
+      const count = Array.isArray(group.members) ? group.members.length : (group.member_count || 0);
+      statusEl.textContent = count ? count + ' members' : '';
+      statusEl.style.display = count ? '' : 'none';
+      renderGroupManagement(group);
+    }
+
+    function renderGroupManagement(group) {
+      const panel = document.getElementById('group-management');
+      const list = document.getElementById('group-members-list');
+      if (!panel || !list || !group) return;
+      const creatorId = Number(group.creator_id);
+      const myId = getMyId();
+      const isCreator = creatorId === myId;
+      panel.classList.add('show');
+      document.getElementById('group-management-title').textContent =
+        'Members (' + ((group.members || []).length) + ')';
+      document.getElementById('group-delete-btn').hidden = !isCreator;
+      document.getElementById('group-add-member-btn').hidden = !isCreator;
+      list.innerHTML = '';
+      (group.members || []).forEach((member) => {
+        const row = document.createElement('div');
+        row.className = 'group-member-item';
+        row.appendChild(avatarNode(member));
+        const name = document.createElement('span');
+        name.className = 'group-member-item-name';
+        name.textContent = (member.display_name || member.email || 'Member') +
+          (Number(member.id) === creatorId ? ' (creator)' : '');
+        row.appendChild(name);
+        if (isCreator && Number(member.id) !== myId) {
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'group-member-remove';
+          remove.textContent = 'Remove';
+          remove.dataset.removeGroupUser = String(member.id);
+          row.appendChild(remove);
+        }
+        list.appendChild(row);
+      });
     }
 
     function mergePersonFields(target, fields) {
@@ -1571,6 +1651,7 @@
     let selectedGroupMemberIds = new Set();
     let groups = [];
     let currentContactId = null; // numeric user id of the open chat
+    let currentGroupId = null;
     let activeRailTab = 'chats';
     const renderedMessageIds = new Set();
 
@@ -1663,6 +1744,8 @@
       emptyEl.style.display = '';
       threadEl.style.removeProperty('display');
       currentContactId = null;
+      currentGroupId = null;
+      document.getElementById('group-management').classList.remove('show');
       messageInput.disabled = true;
       sendBtn.disabled = true;
       attachBtn.disabled = true;
@@ -1684,6 +1767,7 @@
     }
 
     function belongsToOpenChat(message) {
+      if (currentGroupId != null) return String(message.group_id || '') === String(currentGroupId);
       if (currentContactId == null || getMyId() == null) return false;
       const partnerId = conversationPartnerId(message);
       return partnerId != null && sameId(partnerId, currentContactId);
@@ -1704,7 +1788,9 @@
       return {
         id: raw.id,
         sender_id: raw.sender_id ?? raw.senderId,
+        sender_name: raw.sender_name ?? raw.senderName ?? null,
         receiver_id: raw.receiver_id ?? raw.receiverId,
+        group_id: raw.group_id ?? raw.groupId ?? null,
         text: raw.text == null ? '' : String(raw.text),
         status: raw.status || 'sent',
         message_type: raw.message_type || raw.messageType || 'text',
@@ -1839,6 +1925,13 @@
       } else {
         // Text / image / video / file — always mine → right, theirs → left.
         el.className = 'msg ' + (mine ? 'mine' : 'theirs');
+
+        if (message.group_id && message.sender_name) {
+          const sender = document.createElement('div');
+          sender.className = 'group-sender-name';
+          sender.textContent = message.sender_name;
+          el.appendChild(sender);
+        }
 
         const fileUrl = message.file_url;
         const thumb = message.thumbnail_url || fileUrl;
@@ -2023,6 +2116,17 @@
       if (myId == null) return;
       const message = normalizeMessage(rawMessage);
       if (!message) return;
+      if (message.group_id) {
+        const group = groups.find((item) => String(item.groupId || item.id) === String(message.group_id));
+        if (group) {
+          group.last_text = message.text;
+          group.last_at = message.created_at;
+          group.last_sender_id = message.sender_id;
+          groups = [group, ...groups.filter((item) => String(item.groupId || item.id) !== String(message.group_id))];
+          renderConversations();
+        }
+        return;
+      }
       const otherId = conversationPartnerId(message);
       if (otherId == null) return;
 
@@ -2072,6 +2176,7 @@
       }
 
       currentContactId = id;
+  currentGroupId = null;
 
       let p = personById(id);
       if (!p) {
@@ -2122,14 +2227,42 @@
       }
     }
 
+    async function selectGroup(rawGroupId) {
+      const groupId = String(rawGroupId || '');
+      if (!groupId) return;
+      currentGroupId = groupId;
+      currentContactId = null;
+      let group = groups.find((item) => String(item.groupId || item.id) === groupId);
+      showThreadPanel();
+      if (group) updateGroupThreadHeader(group);
+      socket.emit('chat:open', { groupId });
+      threadBody.innerHTML = '<div class="empty-hint">Loading messages…</div>';
+      renderedMessageIds.clear();
+      try {
+        const data = await apiGet('/api/groups/' + encodeURIComponent(groupId) + '/messages?_=' + Date.now());
+        if (String(currentGroupId) !== groupId) return;
+        group = data.group;
+        groups = groups.map((item) => String(item.groupId || item.id) === groupId ? group : item);
+        updateGroupThreadHeader(group);
+        renderMessageHistory(data.messages || []);
+        enableComposer();
+        messageInput.focus();
+      } catch (err) {
+        console.error('[chat] failed to load group messages', err);
+        threadBody.innerHTML = '<div class="empty-hint">Could not load group messages.</div>';
+      }
+    }
+
     function sendMessage() {
-      if (currentContactId == null) {
+      if (currentContactId == null && currentGroupId == null) {
         console.warn('[chat] sendMessage: no conversation open');
         return;
       }
       const text = messageInput.value.trim();
       if (!text) return;
-      socket.emit('message:send', { receiverId: currentContactId, text, messageType: 'text' });
+      socket.emit('message:send', currentGroupId
+        ? { groupId: currentGroupId, text, messageType: 'text' }
+        : { receiverId: currentContactId, text, messageType: 'text' });
       messageInput.value = '';
       messageInput.focus();
     }
@@ -2166,7 +2299,7 @@
     }
 
     async function sendMediaFile(file) {
-      if (currentContactId == null) return;
+      if (currentContactId == null && currentGroupId == null) return;
       const caption = messageInput.value.trim();
       attachBtn.disabled = true;
       sendBtn.disabled = true;
@@ -2174,7 +2307,7 @@
         const uploaded = await uploadFile(file);
         setUploadProgress(true, 100, 'Sending…');
         socket.emit('message:send', {
-          receiverId: currentContactId,
+          ...(currentGroupId ? { groupId: currentGroupId } : { receiverId: currentContactId }),
           text: caption,
           messageType: uploaded.fileType,
           fileUrl: uploaded.url,
@@ -2351,12 +2484,16 @@
       groups.forEach((group) => {
         const card = document.createElement('div');
         card.className = 'group-card';
+        card.dataset.groupId = String(group.groupId || group.id);
+        card.tabIndex = 0;
+        card.setAttribute('role', 'button');
         card.innerHTML = '<div class="group-card-icon"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a6 6 0 0 1 12 0v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a6 6 0 0 0-3-5.19"/></svg></div>';
         const copy = document.createElement('div');
         copy.className = 'group-card-copy';
         copy.innerHTML = '<div class="group-card-name"></div><div class="group-card-meta"></div>';
         copy.querySelector('.group-card-name').textContent = group.name;
-        copy.querySelector('.group-card-meta').textContent = group.memberIds.length + ' member' + (group.memberIds.length === 1 ? '' : 's');
+        const memberCount = Array.isArray(group.members) ? group.members.length : (group.member_count || 0);
+        copy.querySelector('.group-card-meta').textContent = memberCount + ' member' + (memberCount === 1 ? '' : 's');
         card.appendChild(copy);
         groupList.appendChild(card);
       });
@@ -2383,7 +2520,7 @@
         return !q || name.includes(q) || text.includes(q);
       });
       list.innerHTML = '';
-      if (rows.length === 0) {
+      if (rows.length === 0 && groups.length === 0) {
         list.innerHTML = '<div class="empty-hint">' +
           (conversations.length === 0
             ? 'No conversations yet. Tap the pencil or open People to add someone by email.'
@@ -2433,6 +2570,28 @@
         main.appendChild(top); main.appendChild(bottom);
         row.appendChild(aw); row.appendChild(main);
         list.appendChild(row);
+      });
+
+      const groupRows = groups.filter((group) => {
+        const name = String(group.name || '').toLowerCase();
+        const text = String(group.last_text || '').toLowerCase();
+        return !q || name.includes(q) || text.includes(q);
+      });
+      groupRows.forEach((group) => {
+        const row = document.createElement('div');
+        row.className = 'conv' + (String(group.groupId || group.id) === String(currentGroupId) ? ' active' : '');
+        row.dataset.groupId = String(group.groupId || group.id);
+        const aw = document.createElement('div'); aw.className = 'conv-avatar-wrap';
+        aw.appendChild(avatarNode({ display_name: group.name, email: group.groupId || group.id }));
+        const main = document.createElement('div'); main.className = 'conv-main';
+        const top = document.createElement('div'); top.className = 'conv-top';
+        const name = document.createElement('span'); name.className = 'conv-name'; name.textContent = group.name;
+        const time = document.createElement('span'); time.className = 'conv-time'; time.textContent = group.last_at ? timeLabel(group.last_at) : '';
+        top.appendChild(name); top.appendChild(time);
+        const bottom = document.createElement('div'); bottom.className = 'conv-bottom';
+        const preview = document.createElement('span'); preview.className = 'conv-preview'; preview.textContent = group.last_text || 'No messages yet';
+        bottom.appendChild(preview);
+        main.appendChild(top); main.appendChild(bottom); row.appendChild(aw); row.appendChild(main); list.appendChild(row);
       });
 
       const railBadge = document.getElementById('rail-unread');
@@ -2575,6 +2734,8 @@
       ]);
       contacts = cRes.contacts || [];
       conversations = convRes.conversations || [];
+      groups = convRes.groups || [];
+      groups.forEach((group) => socket.emit('group:join', { groupId: group.groupId || group.id }));
       renderOnline();
       renderConversations();
       if (activeRailTab === 'people') renderContactsList();
@@ -3106,7 +3267,65 @@
       selectedGroupMemberIds.delete(String(remove.dataset.removeGroupMember));
       renderGroups();
     });
-    document.getElementById('groups-create-form').addEventListener('submit', (e) => {
+    document.getElementById('group-list').addEventListener('click', (e) => {
+      const card = e.target.closest('[data-group-id]');
+      if (card) selectGroup(card.dataset.groupId);
+    });
+    document.getElementById('group-list').addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('[data-group-id]');
+      if (!card) return;
+      e.preventDefault();
+      selectGroup(card.dataset.groupId);
+    });
+    document.getElementById('group-members-list').addEventListener('click', async (e) => {
+      const remove = e.target.closest('[data-remove-group-user]');
+      if (!remove || currentGroupId == null) return;
+      if (!confirm('Remove this member from the group?')) return;
+      const r = await apiGroupDelete('/api/groups/' + encodeURIComponent(currentGroupId) + '/members/' + remove.dataset.removeGroupUser);
+      if (r.status >= 400) return alert(r.data.error || 'Could not remove member');
+      await loadAll();
+      const group = groups.find((item) => String(item.groupId || item.id) === String(currentGroupId));
+      if (group) updateGroupThreadHeader(group);
+    });
+    document.getElementById('group-add-member-btn').addEventListener('click', async () => {
+      if (currentGroupId == null) return;
+      const group = groups.find((item) => String(item.groupId || item.id) === String(currentGroupId));
+      const currentIds = new Set((group && group.members || []).map((member) => Number(member.id)));
+      const options = contacts.filter((contact) => !currentIds.has(Number(contact.id)));
+      if (!options.length) return alert('All of your contacts are already in this group.');
+      const email = prompt('Enter a contact email to add:\n\n' + options.map((contact) => contact.email).join('\n'));
+      if (!email) return;
+      const contact = options.find((item) => item.email.toLowerCase() === email.trim().toLowerCase());
+      if (!contact) return alert('Choose an email from your contacts.');
+      const r = await apiPost('/api/groups/' + encodeURIComponent(currentGroupId) + '/members', { userId: contact.id });
+      if (r.status >= 400) return alert(r.data.error || 'Could not add member');
+      await loadAll();
+      updateGroupThreadHeader(r.data.group);
+    });
+    document.getElementById('group-leave-btn').addEventListener('click', async () => {
+      if (currentGroupId == null || !confirm('Leave this group?')) return;
+      const groupId = currentGroupId;
+      const r = await apiPost('/api/groups/' + encodeURIComponent(groupId) + '/leave', {});
+      if (r.status >= 400) return alert(r.data.error || 'Could not leave group');
+      groups = groups.filter((group) => String(group.groupId || group.id) !== String(groupId));
+      currentGroupId = null;
+      hideThreadPanel();
+      renderConversations();
+      setRailTab('groups');
+    });
+    document.getElementById('group-delete-btn').addEventListener('click', async () => {
+      if (currentGroupId == null || !confirm('Delete this group and all its messages?')) return;
+      const groupId = currentGroupId;
+      const r = await apiGroupDelete('/api/groups/' + encodeURIComponent(groupId));
+      if (r.status >= 400) return alert(r.data.error || 'Could not delete group');
+      groups = groups.filter((group) => String(group.groupId || group.id) !== String(groupId));
+      currentGroupId = null;
+      hideThreadPanel();
+      renderConversations();
+      setRailTab('groups');
+    });
+    document.getElementById('groups-create-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = document.getElementById('group-name').value.trim();
       const feedback = document.getElementById('groups-feedback');
@@ -3119,18 +3338,37 @@
         feedback.textContent = 'Choose at least one person to add.';
         return;
       }
-      groups.unshift({ name, memberIds: Array.from(selectedGroupMemberIds), createdAt: Date.now() });
-      saveLocalGroups();
-      feedback.className = 'groups-feedback';
-      feedback.textContent = 'Group created. You can start chatting with your members soon.';
-      resetGroupForm();
-      feedback.className = 'groups-feedback ok';
-      feedback.textContent = 'Group created. You can start chatting with your members soon.';
+      const button = document.getElementById('groups-create-btn');
+      button.disabled = true;
+      try {
+        const result = await apiPost('/api/groups', {
+          name,
+          memberIds: Array.from(selectedGroupMemberIds).map(Number),
+        });
+        if (result.status >= 400) throw new Error(result.data.error || 'Could not create group');
+        await loadAll();
+        const created = groups.find((group) => String(group.groupId || group.id) === String(result.data.group.groupId));
+        socket.emit('group:announce', { groupId: result.data.group.groupId });
+        feedback.className = 'groups-feedback ok';
+        feedback.textContent = 'Group created.';
+        resetGroupForm();
+        setRailTab('chats');
+        if (created) selectGroup(created.groupId || created.id);
+      } catch (err) {
+        feedback.className = 'groups-feedback';
+        feedback.textContent = err.message || 'Could not create group.';
+        renderGroups();
+      }
     });
 
     // ----- UI events -----
     // Event delegation so clicks still work after list re-renders.
     document.getElementById('conv-list').addEventListener('click', (e) => {
+      const groupRow = e.target.closest('[data-group-id]');
+      if (groupRow) {
+        selectGroup(groupRow.dataset.groupId);
+        return;
+      }
       const row = e.target.closest('[data-contact-id]');
       if (!row) return;
       selectConversation(row.dataset.contactId);
@@ -3532,6 +3770,36 @@
       upsertSidebarConversation(message); // media preview for every conversation
     });
 
+    socket.on('group:created', ({ group }) => {
+      if (!group || !group.groupId) return;
+      groups = [group, ...groups.filter((item) => String(item.groupId || item.id) !== String(group.groupId))];
+      socket.emit('group:join', { groupId: group.groupId });
+      renderConversations();
+      if (activeRailTab === 'groups') renderGroups();
+    });
+
+    socket.on('group:updated', async ({ groupId, group }) => {
+      if (group) {
+        groups = [group, ...groups.filter((item) => String(item.groupId || item.id) !== String(group.groupId))];
+      }
+      await loadAll();
+      if (currentGroupId != null && String(currentGroupId) === String(groupId || (group && group.groupId))) {
+        const current = groups.find((item) => String(item.groupId || item.id) === String(currentGroupId));
+        if (current) updateGroupThreadHeader(current);
+      }
+    });
+
+    socket.on('group:removed', ({ groupId, deleted }) => {
+      groups = groups.filter((group) => String(group.groupId || group.id) !== String(groupId));
+      if (currentGroupId != null && String(currentGroupId) === String(groupId)) {
+        currentGroupId = null;
+        hideThreadPanel();
+        alert(deleted ? 'This group was deleted.' : 'You are no longer a member of this group.');
+      }
+      renderConversations();
+      if (activeRailTab === 'groups') renderGroups();
+    });
+
     socket.on('message:status', ({ id, status }) => {
       applyMessageStatus(id, status);
     });
@@ -3715,7 +3983,6 @@
       }
     });
 
-    loadLocalGroups();
     loadMe().then(loadAll).then(() => {
       // Ensure chats sidebar (not calls) is visible on every fresh load.
       setRailTab('chats');

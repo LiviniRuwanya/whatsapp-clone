@@ -11,6 +11,7 @@
 // directly.
 
 const path = require('path');
+const crypto = require('crypto');
 const Database = require('better-sqlite3');
 
 const DB_FILE = path.join(__dirname, '..', 'whatsapp.db');
@@ -39,6 +40,7 @@ function ensureMessagesAllowCallType() {
         id            INTEGER PRIMARY KEY AUTOINCREMENT,
         sender_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         receiver_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        group_id      TEXT REFERENCES groups(id) ON DELETE CASCADE,
         text          TEXT NOT NULL DEFAULT '',
         status        TEXT NOT NULL DEFAULT 'sent'
                         CHECK (status IN ('sent', 'delivered', 'read')),
@@ -51,11 +53,11 @@ function ensureMessagesAllowCallType() {
         created_at    TEXT NOT NULL DEFAULT (datetime('now'))
       );
       INSERT INTO messages_mig (
-        id, sender_id, receiver_id, text, status,
+        id, sender_id, receiver_id, group_id, text, status,
         message_type, file_url, thumbnail_url, file_name, file_size, created_at
       )
       SELECT
-        id, sender_id, receiver_id, text, status,
+        id, sender_id, receiver_id, group_id, text, status,
         message_type, file_url, thumbnail_url, file_name, file_size, created_at
       FROM messages;
       DROP TABLE messages;
@@ -164,6 +166,22 @@ function initSchema() {
     );
   `);
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS groups (
+      id           TEXT PRIMARY KEY,
+      name         TEXT NOT NULL,
+      creator_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS group_members (
+      group_id     TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      joined_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (group_id, user_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members (user_id, group_id);
+  `);
+
   // 1-to-1 messages. status tracks the delivery lifecycle.
   // text is the body for text messages, or an optional caption for media.
   // message_type 'call' = inline call event in the thread (missed/answered/declined).
@@ -199,9 +217,11 @@ function initSchema() {
   addCol('thumbnail_url', 'thumbnail_url TEXT');
   addCol('file_name', 'file_name TEXT');
   addCol('file_size', 'file_size INTEGER');
+  addCol('group_id', 'group_id TEXT REFERENCES groups(id) ON DELETE CASCADE');
 
   // Older DBs have CHECK (... 'file') without 'call' — rebuild so call events can be stored.
   ensureMessagesAllowCallType();
+  db.exec('CREATE INDEX IF NOT EXISTS idx_messages_group ON messages (group_id, created_at, id)');
   // Call history (Phase A). Real WebRTC calling comes in Phase B/C.
   db.exec(`
     CREATE TABLE IF NOT EXISTS calls (
@@ -448,7 +468,8 @@ function getContacts(userId) {
 // ---------- Message queries ----------
 function createMessage({
   senderId,
-  receiverId,
+  receiverId = null,
+  groupId = null,
   text = '',
   status = 'sent',
   messageType = 'text',
@@ -458,22 +479,25 @@ function createMessage({
   fileSize = null,
   createdAt = null,
 }) {
+  // Legacy private-message rows require receiver_id; group_id is authoritative for group rows.
+  receiverId = receiverId == null ? senderId : receiverId;
   const type = ['text', 'image', 'video', 'file', 'call'].includes(messageType)
     ? messageType
     : 'text';
   const info = createdAt
     ? db.prepare(`
         INSERT INTO messages (
-          sender_id, receiver_id, text, status,
+          sender_id, receiver_id, group_id, text, status,
           message_type, file_url, thumbnail_url, file_name, file_size, created_at
         )
         VALUES (
-          @senderId, @receiverId, @text, @status,
+          @senderId, @receiverId, @groupId, @text, @status,
           @messageType, @fileUrl, @thumbnailUrl, @fileName, @fileSize, @createdAt
         )
       `).run({
         senderId,
         receiverId,
+        groupId,
         text: text || '',
         status,
         messageType: type,
@@ -485,16 +509,17 @@ function createMessage({
       })
     : db.prepare(`
         INSERT INTO messages (
-          sender_id, receiver_id, text, status,
+          sender_id, receiver_id, group_id, text, status,
           message_type, file_url, thumbnail_url, file_name, file_size
         )
         VALUES (
-          @senderId, @receiverId, @text, @status,
+          @senderId, @receiverId, @groupId, @text, @status,
           @messageType, @fileUrl, @thumbnailUrl, @fileName, @fileSize
         )
       `).run({
         senderId,
         receiverId,
+        groupId,
         text: text || '',
         status,
         messageType: type,
@@ -514,10 +539,15 @@ function getMessageById(id) {
 // so sender and receiver get the exact same object (no dropped columns).
 function toPublicMessage(row) {
   if (!row) return null;
+  const sender = row.sender_name
+    ? null
+    : getUserById(row.sender_id);
   return {
     id: row.id,
     sender_id: row.sender_id,
+    sender_name: row.sender_name || (sender && sender.display_name) || null,
     receiver_id: row.receiver_id,
+    group_id: row.group_id || null,
     text: row.text == null ? '' : String(row.text),
     status: row.status || 'sent',
     message_type: row.message_type || 'text',
@@ -638,6 +668,79 @@ function getConversationTimeline(userA, userB) {
 // Full conversation between two users, oldest first (messages only).
 function getMessagesBetween(userA, userB) {
   return getConversationTimeline(userA, userB);
+}
+
+function createGroup({ name, creatorId, memberIds }) {
+  const groupId = crypto.randomUUID();
+  const uniqueMembers = [...new Set([creatorId, ...memberIds.map(Number)])]
+    .filter((id) => Number.isInteger(id));
+  const tx = db.transaction(() => {
+    db.prepare('INSERT INTO groups (id, name, creator_id) VALUES (?, ?, ?)')
+      .run(groupId, name.trim(), creatorId);
+    const addMember = db.prepare('INSERT INTO group_members (group_id, user_id) VALUES (?, ?)');
+    uniqueMembers.forEach((userId) => addMember.run(groupId, userId));
+  });
+  tx();
+  return getGroupForUser(groupId, creatorId);
+}
+
+function isGroupCreator(groupId, userId) {
+  return !!db.prepare('SELECT 1 FROM groups WHERE id = ? AND creator_id = ?').get(groupId, userId);
+}
+
+function addGroupMember(groupId, userId) {
+  db.prepare('INSERT OR IGNORE INTO group_members (group_id, user_id) VALUES (?, ?)')
+    .run(groupId, userId);
+  return getGroupForUser(groupId, userId);
+}
+
+function removeGroupMember(groupId, userId) {
+  return db.prepare('DELETE FROM group_members WHERE group_id = ? AND user_id = ?')
+    .run(groupId, userId).changes > 0;
+}
+
+function deleteGroup(groupId) {
+  return db.prepare('DELETE FROM groups WHERE id = ?').run(groupId).changes > 0;
+}
+
+function isGroupMember(groupId, userId) {
+  return !!db.prepare('SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?').get(groupId, userId);
+}
+
+function getGroupMembers(groupId) {
+  return db.prepare(`
+    SELECT u.id, u.email, u.display_name, u.avatar_url, u.is_online, u.last_seen
+    FROM group_members gm JOIN users u ON u.id = gm.user_id
+    WHERE gm.group_id = ? ORDER BY gm.joined_at ASC, u.display_name COLLATE NOCASE
+  `).all(groupId);
+}
+
+function getGroupForUser(groupId, userId) {
+  if (!isGroupMember(groupId, userId)) return null;
+  const group = db.prepare('SELECT id, name, creator_id, created_at FROM groups WHERE id = ?').get(groupId);
+  if (!group) return null;
+  return { ...group, groupId: group.id, members: getGroupMembers(group.id) };
+}
+
+function getGroupsForUser(userId) {
+  return db.prepare(`
+    SELECT g.id, g.name, g.creator_id, g.created_at,
+      (SELECT COUNT(*) FROM group_members gm2 WHERE gm2.group_id = g.id) AS member_count,
+      (SELECT m.text FROM messages m WHERE m.group_id = g.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_text,
+      (SELECT m.created_at FROM messages m WHERE m.group_id = g.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_at,
+      (SELECT m.sender_id FROM messages m WHERE m.group_id = g.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_sender_id
+    FROM groups g JOIN group_members gm ON gm.group_id = g.id
+    WHERE gm.user_id = ? ORDER BY COALESCE(last_at, g.created_at) DESC, g.id DESC
+  `).all(userId).map((group) => ({ ...group, groupId: group.id, members: getGroupMembers(group.id) }));
+}
+
+function getGroupTimeline(groupId, userId) {
+  if (!isGroupMember(groupId, userId)) return null;
+  return db.prepare(`
+    SELECT m.*, u.display_name AS sender_name
+    FROM messages m JOIN users u ON u.id = m.sender_id
+    WHERE m.group_id = ? ORDER BY m.created_at ASC, m.id ASC
+  `).all(groupId).map(toPublicMessage);
 }
 
 function updateMessageStatus(id, status) {
@@ -838,6 +941,15 @@ module.exports = {
   createCallThreadMessage,
   getConversationTimeline,
   getMessagesBetween,
+  createGroup,
+  isGroupMember,
+  isGroupCreator,
+  addGroupMember,
+  removeGroupMember,
+  deleteGroup,
+  getGroupForUser,
+  getGroupsForUser,
+  getGroupTimeline,
   updateMessageStatus,
   getUnreadCount,
   markConversationRead,
