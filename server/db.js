@@ -170,8 +170,11 @@ function initSchema() {
     CREATE TABLE IF NOT EXISTS groups (
       id           TEXT PRIMARY KEY,
       name         TEXT NOT NULL,
+      description  TEXT NOT NULL DEFAULT '',
+      avatar_url   TEXT,
       creator_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS group_members (
       group_id     TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -181,6 +184,18 @@ function initSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members (user_id, group_id);
   `);
+  const groupCols = db.prepare('PRAGMA table_info(groups)').all().map((c) => c.name);
+  if (!groupCols.includes('description')) {
+    db.exec("ALTER TABLE groups ADD COLUMN description TEXT NOT NULL DEFAULT ''");
+  }
+  if (!groupCols.includes('avatar_url')) {
+    db.exec('ALTER TABLE groups ADD COLUMN avatar_url TEXT');
+  }
+  if (!groupCols.includes('updated_at')) {
+    // SQLite ALTER TABLE only allows constant defaults — set values in a follow-up UPDATE.
+    db.exec('ALTER TABLE groups ADD COLUMN updated_at TEXT');
+    db.exec("UPDATE groups SET updated_at = COALESCE(created_at, datetime('now'))");
+  }
 
   // 1-to-1 messages. status tracks the delivery lifecycle.
   // text is the body for text messages, or an optional caption for media.
@@ -670,13 +685,13 @@ function getMessagesBetween(userA, userB) {
   return getConversationTimeline(userA, userB);
 }
 
-function createGroup({ name, creatorId, memberIds }) {
+function createGroup({ name, description = '', creatorId, memberIds }) {
   const groupId = crypto.randomUUID();
   const uniqueMembers = [...new Set([creatorId, ...memberIds.map(Number)])]
     .filter((id) => Number.isInteger(id));
   const tx = db.transaction(() => {
-    db.prepare('INSERT INTO groups (id, name, creator_id) VALUES (?, ?, ?)')
-      .run(groupId, name.trim(), creatorId);
+    db.prepare('INSERT INTO groups (id, name, description, creator_id, updated_at) VALUES (?, ?, ?, ?, datetime(\'now\'))')
+      .run(groupId, name.trim(), String(description || '').trim().slice(0, 139), creatorId);
     const addMember = db.prepare('INSERT INTO group_members (group_id, user_id) VALUES (?, ?)');
     uniqueMembers.forEach((userId) => addMember.run(groupId, userId));
   });
@@ -699,8 +714,59 @@ function removeGroupMember(groupId, userId) {
     .run(groupId, userId).changes > 0;
 }
 
+function leaveGroup(groupId, userId) {
+  const tx = db.transaction(() => {
+    const group = db.prepare('SELECT creator_id FROM groups WHERE id = ?').get(groupId);
+    if (!group) return { removed: false, deleted: false };
+    if (Number(group.creator_id) === Number(userId)) {
+      const successor = db.prepare(`
+        SELECT user_id FROM group_members
+        WHERE group_id = ? AND user_id <> ?
+        ORDER BY joined_at ASC, user_id ASC LIMIT 1
+      `).get(groupId, userId);
+      if (successor) {
+        db.prepare('UPDATE groups SET creator_id = ? WHERE id = ?').run(successor.user_id, groupId);
+      } else {
+        db.prepare('DELETE FROM groups WHERE id = ?').run(groupId);
+        return { removed: true, deleted: true };
+      }
+    }
+    const removed = db.prepare('DELETE FROM group_members WHERE group_id = ? AND user_id = ?')
+      .run(groupId, userId).changes > 0;
+    return { removed, deleted: false };
+  });
+  return tx();
+}
+
 function deleteGroup(groupId) {
   return db.prepare('DELETE FROM groups WHERE id = ?').run(groupId).changes > 0;
+}
+
+function getGroupById(groupId) {
+  return db.prepare(`
+    SELECT id, name, description, avatar_url, creator_id, created_at, updated_at
+    FROM groups WHERE id = ?
+  `).get(groupId);
+}
+
+function updateGroupInfo(groupId, { name, description }) {
+  const result = db.prepare(`
+    UPDATE groups
+    SET name = ?, description = ?, updated_at = datetime('now')
+    WHERE id = ?
+  `).run(name, description, groupId);
+  if (!result.changes) return null;
+  return getGroupById(groupId);
+}
+
+function updateGroupAvatar(groupId, avatarUrl) {
+  const result = db.prepare(`
+    UPDATE groups
+    SET avatar_url = ?, updated_at = datetime('now')
+    WHERE id = ?
+  `).run(avatarUrl, groupId);
+  if (!result.changes) return null;
+  return getGroupById(groupId);
 }
 
 function isGroupMember(groupId, userId) {
@@ -717,14 +783,14 @@ function getGroupMembers(groupId) {
 
 function getGroupForUser(groupId, userId) {
   if (!isGroupMember(groupId, userId)) return null;
-  const group = db.prepare('SELECT id, name, creator_id, created_at FROM groups WHERE id = ?').get(groupId);
+  const group = db.prepare('SELECT id, name, description, avatar_url, creator_id, created_at, updated_at FROM groups WHERE id = ?').get(groupId);
   if (!group) return null;
   return { ...group, groupId: group.id, members: getGroupMembers(group.id) };
 }
 
 function getGroupsForUser(userId) {
   return db.prepare(`
-    SELECT g.id, g.name, g.creator_id, g.created_at,
+    SELECT g.id, g.name, g.description, g.avatar_url, g.creator_id, g.created_at, g.updated_at,
       (SELECT COUNT(*) FROM group_members gm2 WHERE gm2.group_id = g.id) AS member_count,
       (SELECT m.text FROM messages m WHERE m.group_id = g.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_text,
       (SELECT m.created_at FROM messages m WHERE m.group_id = g.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_at,
@@ -946,6 +1012,10 @@ module.exports = {
   isGroupCreator,
   addGroupMember,
   removeGroupMember,
+  leaveGroup,
+  getGroupById,
+  updateGroupInfo,
+  updateGroupAvatar,
   deleteGroup,
   getGroupForUser,
   getGroupsForUser,

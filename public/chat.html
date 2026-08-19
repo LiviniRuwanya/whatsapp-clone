@@ -762,6 +762,43 @@
     .contact-profile-label { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
     .contact-profile-value { margin-top: 5px; color: var(--ink); font-size: 14px; line-height: 1.45; word-break: break-word; }
     .contact-profile-value.empty { color: var(--muted); }
+    .group-info-view { display: none; position: fixed; inset: 0; z-index: 1250; background: rgba(30,36,64,.45); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 20px; }
+    .group-info-view.show { display: flex; }
+    .group-info-card { position: relative; width: min(460px, 100%); max-height: min(720px, 92vh); overflow-y: auto; padding: 28px 24px 24px; border-radius: 16px; background: #fff; box-shadow: 0 22px 60px rgba(30,36,64,.22); animation: modalIn .22s ease; }
+    .group-info-close { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border: 0; border-radius: 9px; background: #f3f2f8; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
+    .group-info-avatar { width: 112px; height: 112px; margin: 4px auto 14px; font-size: 32px; }
+    .group-info-avatar-button { display: block; border: 0; padding: 0; margin: 4px auto 14px; background: transparent; cursor: pointer; }
+    .group-info-avatar-button:focus-visible { outline: 3px solid rgba(109,94,252,.35); outline-offset: 3px; border-radius: 50%; }
+    .group-info-avatar-change { display: block; margin: -6px auto 12px; border: 0; background: transparent; color: var(--indigo-deep); font-size: 12px; font-weight: 750; cursor: pointer; }
+    .group-info-name { text-align: center; color: var(--ink); font-size: 21px; font-weight: 800; }
+    .group-info-description { margin: 7px auto 0; max-width: 330px; color: var(--muted); font-size: 13px; line-height: 1.45; text-align: center; }
+    .group-info-editable { display: flex; align-items: center; justify-content: center; gap: 7px; }
+    .group-info-edit { border: 0; background: transparent; color: var(--indigo-deep); cursor: pointer; font-size: 11px; font-weight: 750; }
+    .group-info-edit-form { display: none; align-items: center; gap: 6px; margin: 7px auto 0; max-width: 330px; }
+    .group-info-edit-form.show { display: flex; }
+    .group-info-edit-input { min-width: 0; flex: 1; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font: inherit; font-size: 13px; outline: none; }
+    .group-info-edit-input:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px rgba(109,94,252,.12); }
+    .group-info-edit-save, .group-info-edit-cancel { border: 0; border-radius: 7px; padding: 7px 8px; cursor: pointer; font-size: 11px; font-weight: 750; }
+    .group-info-edit-save { background: var(--indigo); color: #fff; }
+    .group-info-edit-cancel { background: #f3f2f8; color: var(--muted); }
+    .group-info-feedback { min-height: 16px; margin-top: 7px; color: var(--muted); font-size: 11px; text-align: center; }
+    .group-info-feedback.ok { color: #16a34a; }
+    .group-info-feedback.error { color: #dc2626; }
+    .group-info-meta { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .group-info-members { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+    .group-info-member { display: flex; align-items: center; gap: 9px; }
+    .group-info-member .avatar { width: 34px; height: 34px; font-size: 12px; }
+    .group-info-member-name { flex: 1; min-width: 0; color: var(--ink); font-size: 13px; font-weight: 700; }
+    .group-info-member-action { border: 0; background: transparent; color: #dc2626; cursor: pointer; font-size: 11px; }
+    .group-info-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 18px; }
+    .group-info-action { flex: 1 1 130px; border: 1px solid var(--line); border-radius: 9px; padding: 9px 10px; background: #fff; color: var(--indigo-deep); font-size: 12px; font-weight: 750; cursor: pointer; }
+    .group-info-action.danger { color: #dc2626; }
+    .group-add-picker { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .group-add-picker.show { display: block; }
+    .group-add-picker-list { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; margin-top: 8px; }
+    .group-add-picker-row { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 8px; background: #f7f6fd; color: var(--ink); font-size: 12px; }
+    .group-add-picker-row .avatar { width: 28px; height: 28px; font-size: 10px; }
+    .group-info-empty { color: var(--muted); font-size: 12px; }
     .thread-body {
       grid-row: 2;
       min-height: 0;
@@ -774,7 +811,7 @@
       gap: 6px;
       background:
         radial-gradient(circle at 20% 20%, rgba(109,94,252,.04), transparent 40%),
-        radial-gradient(circle at 80% 80%, rgba(79,70,229,.05), transparent 40%),
+        radial-gradient(circle  at 80% 80%, rgba(79,70,229,.05), transparent 40%),
         var(--panel-bg);
     }
     .thread-day {
@@ -1156,6 +1193,8 @@
         <form class="groups-create" id="groups-create-form" autocomplete="off">
           <label class="groups-field-label" for="group-name">GROUP NAME</label>
           <input class="groups-name-input" id="group-name" type="text" maxlength="50" placeholder="e.g. Weekend plans" />
+          <label class="groups-field-label" for="group-description">GROUP DESCRIPTION</label>
+          <input class="groups-name-input" id="group-description" type="text" maxlength="139" placeholder="What is this group about?" />
           <div class="groups-field-label">ADD MEMBERS <span id="group-member-count">(0)</span></div>
           <div class="groups-selected" id="groups-selected" aria-live="polite"></div>
           <input class="groups-member-search" id="groups-member-search" type="search" placeholder="Search your contacts..." autocomplete="off" />
@@ -1317,17 +1356,6 @@
             </button>
           </div>
         </div>
-        <div class="group-management" id="group-management">
-          <div class="group-management-head">
-            <div class="group-management-title" id="group-management-title">Group members</div>
-            <div class="group-management-actions">
-              <button type="button" class="group-manage-btn" id="group-add-member-btn">Add member</button>
-              <button type="button" class="group-manage-btn danger" id="group-leave-btn">Leave</button>
-              <button type="button" class="group-manage-btn danger" id="group-delete-btn">Delete</button>
-            </div>
-          </div>
-          <div class="group-members-list" id="group-members-list"></div>
-        </div>
         <div class="thread-body" id="thread-body"></div>
         <div class="upload-bar" id="upload-bar">
           <span id="upload-label">Uploading…</span>
@@ -1360,6 +1388,49 @@
       <div class="contact-profile-row">
         <div class="contact-profile-label">Last seen</div>
         <div class="contact-profile-value" id="contact-profile-last-seen">Loading…</div>
+      </div>
+    </section>
+  </div>
+
+  <div class="group-info-view" id="group-info-view" role="dialog" aria-modal="true" aria-labelledby="group-info-name">
+    <section class="group-info-card">
+      <button type="button" class="group-info-close" id="group-info-close" title="Close group info" aria-label="Close group info">×</button>
+      <button type="button" class="group-info-avatar-button" id="group-info-avatar-button" title="Change group picture" aria-label="Change group picture">
+        <div class="avatar group-info-avatar" id="group-info-avatar"></div>
+      </button>
+      <button type="button" class="group-info-avatar-change" id="group-info-avatar-change">Change photo</button>
+      <input type="file" id="group-info-avatar-input" hidden accept="image/jpeg,image/png,image/webp" />
+      <div class="group-info-editable">
+        <div class="group-info-name" id="group-info-name">Group</div>
+        <button type="button" class="group-info-edit" id="group-info-name-edit">Edit</button>
+      </div>
+      <form class="group-info-edit-form" id="group-info-name-form">
+        <input class="group-info-edit-input" id="group-info-name-input" maxlength="50" aria-label="Group name" />
+        <button class="group-info-edit-save" type="submit">Save</button>
+        <button class="group-info-edit-cancel" type="button" data-group-edit-cancel="name">Cancel</button>
+      </form>
+      <div class="group-info-editable">
+        <div class="group-info-description" id="group-info-description">No description</div>
+        <button type="button" class="group-info-edit" id="group-info-description-edit">Edit</button>
+      </div>
+      <form class="group-info-edit-form" id="group-info-description-form">
+        <input class="group-info-edit-input" id="group-info-description-input" maxlength="139" aria-label="Group description" />
+        <button class="group-info-edit-save" type="submit">Save</button>
+        <button class="group-info-edit-cancel" type="button" data-group-edit-cancel="description">Cancel</button>
+      </form>
+      <div class="group-info-feedback" id="group-info-feedback" aria-live="polite"></div>
+      <div class="group-info-meta" id="group-info-creator"></div>
+      <div class="group-info-meta" id="group-info-member-count"></div>
+      <div class="group-info-members" id="group-info-members"></div>
+      <div class="group-info-actions">
+        <button type="button" class="group-info-action" id="group-info-add">Add members</button>
+        <button type="button" class="group-info-action" id="group-info-leave">Leave group</button>
+        <button type="button" class="group-info-action danger" id="group-info-delete">Delete group</button>
+      </div>
+      <div class="group-add-picker" id="group-add-picker">
+        <div class="group-info-meta">Select contacts to add</div>
+        <div class="group-add-picker-list" id="group-add-picker-list"></div>
+        <button type="button" class="group-info-action" id="group-info-add-confirm">Add selected members</button>
       </div>
     </section>
   </div>
@@ -1476,6 +1547,19 @@
       if (res.status === 401) { clearSession(); location.href = '/'; throw new Error('unauth'); }
       return { status: res.status, data: await res.json().catch(() => ({})) };
     }
+    async function apiPut(path, body) {
+      const options = {
+        method: 'PUT',
+        headers: { Authorization: 'Bearer ' + token },
+      };
+      if (body !== undefined) {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(body);
+      }
+      const res = await fetch(path, options);
+      if (res.status === 401) { clearSession(); location.href = '/'; throw new Error('unauth'); }
+      return { status: res.status, data: await res.json().catch(() => ({})) };
+    }
     async function apiDelete(path) {
       const res = await fetch(path, {
         method: 'DELETE',
@@ -1535,9 +1619,9 @@
     function updateThreadHeader(person) {
       if (!person) return;
       const avatarButton = document.getElementById('thread-avatar-button');
-      avatarButton.disabled = currentContactId == null;
-      avatarButton.setAttribute('aria-label', currentContactId == null ? 'Group avatar' : 'View contact profile');
-      avatarButton.title = currentContactId == null ? 'Group avatar' : 'View contact profile';
+      avatarButton.disabled = false;
+      avatarButton.setAttribute('aria-label', 'View contact profile');
+      avatarButton.title = 'View contact profile';
       paintAvatar(document.getElementById('thread-avatar'), person);
       document.getElementById('thread-name').textContent =
         person.name || person.display_name || '';
@@ -1550,23 +1634,65 @@
     function updateGroupThreadHeader(group) {
       if (!group) return;
       const avatarButton = document.getElementById('thread-avatar-button');
-      avatarButton.disabled = true;
-      avatarButton.setAttribute('aria-label', 'Group avatar');
-      avatarButton.title = 'Group avatar';
+      avatarButton.disabled = false;
+      avatarButton.setAttribute('aria-label', 'View group information');
+      avatarButton.title = 'View group information';
       paintAvatar(document.getElementById('thread-avatar'), {
         display_name: group.name,
         email: group.groupId || group.id,
+        avatar_url: group.avatar_url || null,
       });
       document.getElementById('thread-name').textContent = group.name;
       const statusEl = document.getElementById('thread-status');
       const count = Array.isArray(group.members) ? group.members.length : (group.member_count || 0);
       statusEl.textContent = count ? count + ' members' : '';
       statusEl.style.display = count ? '' : 'none';
-      renderGroupManagement(group);
+      renderGroupInfo(group);
     }
 
     function closeContactProfile() {
       document.getElementById('contact-profile-view').classList.remove('show');
+    }
+
+    function closeGroupInfo() {
+      document.getElementById('group-info-view').classList.remove('show');
+      document.getElementById('group-add-picker').classList.remove('show');
+    }
+
+    function setGroupInfoFeedback(message, tone) {
+      const el = document.getElementById('group-info-feedback');
+      el.textContent = message || '';
+      el.className = 'group-info-feedback' + (tone ? ' ' + tone : '');
+    }
+
+    function replaceGroupInState(group) {
+      if (!group) return;
+      const id = String(group.groupId || group.id);
+      groups = [group, ...groups.filter((item) => String(item.groupId || item.id) !== id)];
+    }
+
+    function openGroupInfo() {
+      if (currentGroupId == null) return;
+      const group = groups.find((item) => String(item.groupId || item.id) === String(currentGroupId));
+      if (!group) return;
+      closeContactProfile();
+      renderGroupInfo(group);
+      document.getElementById('group-info-view').classList.add('show');
+      apiGet('/api/groups/' + encodeURIComponent(currentGroupId) + '?_=' + Date.now())
+        .then((result) => {
+          if (currentGroupId == null) return;
+          const fresh = result && result.group;
+          if (!fresh) return;
+          replaceGroupInState(fresh);
+          renderConversations();
+          renderGroupInfo(fresh);
+          if (String(currentGroupId) === String(fresh.groupId || fresh.id)) {
+            updateGroupThreadHeader(fresh);
+          }
+        })
+        .catch((err) => {
+          setGroupInfoFeedback(err.message || 'Could not refresh group information.', 'error');
+        });
     }
 
     async function openContactProfile() {
@@ -1617,37 +1743,137 @@
       }
     }
 
-    function renderGroupManagement(group) {
-      const panel = document.getElementById('group-management');
-      const list = document.getElementById('group-members-list');
-      if (!panel || !list || !group) return;
+    function renderGroupInfo(group) {
+      if (!group) return;
       const creatorId = Number(group.creator_id);
       const myId = getMyId();
       const isCreator = creatorId === myId;
-      panel.classList.add('show');
-      document.getElementById('group-management-title').textContent =
-        'Members (' + ((group.members || []).length) + ')';
-      document.getElementById('group-delete-btn').hidden = !isCreator;
-      document.getElementById('group-add-member-btn').hidden = !isCreator;
+      const creator = (group.members || []).find((member) => Number(member.id) === creatorId);
+      paintAvatar(document.getElementById('group-info-avatar'), { display_name: group.name, email: group.groupId || group.id, avatar_url: group.avatar_url || null });
+      document.getElementById('group-info-name').textContent = group.name || 'Group';
+      const description = document.getElementById('group-info-description');
+      description.textContent = group.description || 'No description';
+      description.classList.toggle('empty', !group.description);
+      document.getElementById('group-info-name-edit').hidden = !isCreator;
+      document.getElementById('group-info-description-edit').hidden = !isCreator;
+      document.getElementById('group-info-avatar-button').disabled = !isCreator;
+      document.getElementById('group-info-avatar-change').hidden = !isCreator;
+      document.getElementById('group-info-avatar-button').title = isCreator ? 'Change group picture' : 'Group picture';
+      document.getElementById('group-info-name-input').value = group.name || '';
+      document.getElementById('group-info-description-input').value = group.description || '';
+      setGroupInfoFeedback('');
+      document.getElementById('group-info-name-form').classList.remove('show');
+      document.getElementById('group-info-description-form').classList.remove('show');
+      document.getElementById('group-info-name-edit').hidden = !isCreator;
+      document.getElementById('group-info-description-edit').hidden = !isCreator;
+      const createdAt = group.created_at ? timeLabel(group.created_at) : 'unknown';
+      document.getElementById('group-info-creator').textContent =
+        'Created by: ' + ((creator && creator.display_name) || 'Unknown') + ' · ' + createdAt;
+      document.getElementById('group-info-member-count').textContent =
+        'Members: ' + ((group.members || []).length);
+      const list = document.getElementById('group-info-members');
       list.innerHTML = '';
       (group.members || []).forEach((member) => {
         const row = document.createElement('div');
-        row.className = 'group-member-item';
+        row.className = 'group-info-member';
         row.appendChild(avatarNode(member));
         const name = document.createElement('span');
-        name.className = 'group-member-item-name';
+        name.className = 'group-info-member-name';
         name.textContent = (member.display_name || member.email || 'Member') +
           (Number(member.id) === creatorId ? ' (creator)' : '');
         row.appendChild(name);
         if (isCreator && Number(member.id) !== myId) {
           const remove = document.createElement('button');
           remove.type = 'button';
-          remove.className = 'group-member-remove';
+          remove.className = 'group-info-member-action';
           remove.textContent = 'Remove';
           remove.dataset.removeGroupUser = String(member.id);
           row.appendChild(remove);
         }
         list.appendChild(row);
+      });
+      document.getElementById('group-info-add').hidden = !isCreator;
+      document.getElementById('group-info-delete').hidden = !isCreator;
+      document.getElementById('group-info-leave').hidden = false;
+      renderGroupAddPicker(group);
+    }
+
+    function startGroupEdit(field) {
+      const group = groups.find((item) => String(item.groupId || item.id) === String(currentGroupId));
+      if (!group || Number(group.creator_id) !== getMyId()) return;
+      document.getElementById('group-info-name-form').classList.remove('show');
+      document.getElementById('group-info-description-form').classList.remove('show');
+      document.getElementById('group-info-name-edit').hidden = false;
+      document.getElementById('group-info-description-edit').hidden = false;
+      document.getElementById('group-info-' + field + '-form').classList.add('show');
+      document.getElementById('group-info-' + field + '-edit').hidden = true;
+      document.getElementById('group-info-' + field + '-input').focus();
+    }
+
+    function cancelGroupEdit(field) {
+      const group = groups.find((item) => String(item.groupId || item.id) === String(currentGroupId));
+      if (group) document.getElementById('group-info-' + field + '-input').value = group[field] || '';
+      document.getElementById('group-info-' + field + '-form').classList.remove('show');
+      document.getElementById('group-info-' + field + '-edit').hidden = false;
+      setGroupInfoFeedback('');
+    }
+
+    async function saveGroupInfo(event, field) {
+      event.preventDefault();
+      const group = groups.find((item) => String(item.groupId || item.id) === String(currentGroupId));
+      if (!group || Number(group.creator_id) !== getMyId()) return;
+      const name = document.getElementById('group-info-name-input').value.trim();
+      const description = document.getElementById('group-info-description-input').value.trim();
+      if (!name) {
+        setGroupInfoFeedback('Group name is required.', 'error');
+        if (field === 'name') document.getElementById('group-info-name-input').focus();
+        return;
+      }
+      if (name.length > 50) {
+        setGroupInfoFeedback('Group name must be 50 characters or fewer.', 'error');
+        return;
+      }
+      if (description.length > 139) {
+        setGroupInfoFeedback('Description must be 139 characters or fewer.', 'error');
+        return;
+      }
+      setGroupInfoFeedback('Saving…');
+      try {
+        const result = await apiPut('/api/groups/' + encodeURIComponent(currentGroupId), { name, description });
+        if (result.status >= 400) throw new Error(result.data.error || 'Failed to update group information.');
+        const updated = result.data.group;
+        replaceGroupInState(updated);
+        renderConversations();
+        updateGroupThreadHeader(updated);
+        renderGroupInfo(updated);
+        setGroupInfoFeedback(field === 'name' ? 'Group name updated.' : 'Group description updated.', 'ok');
+      } catch (err) {
+        setGroupInfoFeedback(err.message || 'Failed to update group information.', 'error');
+      }
+    }
+
+    function renderGroupAddPicker(group) {
+      const picker = document.getElementById('group-add-picker-list');
+      const memberIds = new Set((group.members || []).map((member) => Number(member.id)));
+      const options = contacts.filter((contact) => !memberIds.has(Number(contact.id)));
+      picker.innerHTML = '';
+      if (!options.length) {
+        picker.innerHTML = '<div class="group-info-empty">All contacts are already members.</div>';
+        return;
+      }
+      options.forEach((contact) => {
+        const row = document.createElement('label');
+        row.className = 'group-add-picker-row';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = String(contact.id);
+        checkbox.dataset.groupAddChoice = 'true';
+        row.appendChild(checkbox);
+        row.appendChild(avatarNode(contact));
+        const name = document.createElement('span');
+        name.textContent = contact.display_name || contact.email || 'Contact';
+        row.appendChild(name);
+        picker.appendChild(row);
       });
     }
 
@@ -1836,7 +2062,7 @@
       currentGroupId = null;
       contactProfileRequestId++;
       closeContactProfile();
-      document.getElementById('group-management').classList.remove('show');
+      closeGroupInfo();
       messageInput.disabled = true;
       sendBtn.disabled = true;
       attachBtn.disabled = true;
@@ -2599,6 +2825,7 @@
       selectedGroupMemberIds = new Set();
       groupMemberFilter = '';
       document.getElementById('group-name').value = '';
+      document.getElementById('group-description').value = '';
       document.getElementById('groups-member-search').value = '';
       document.getElementById('groups-feedback').textContent = '';
       renderGroups();
@@ -2675,7 +2902,7 @@
         row.className = 'conv' + (String(group.groupId || group.id) === String(currentGroupId) ? ' active' : '');
         row.dataset.groupId = String(group.groupId || group.id);
         const aw = document.createElement('div'); aw.className = 'conv-avatar-wrap';
-        aw.appendChild(avatarNode({ display_name: group.name, email: group.groupId || group.id }));
+        aw.appendChild(avatarNode({ display_name: group.name, email: group.groupId || group.id, avatar_url: group.avatar_url || null }));
         const main = document.createElement('div'); main.className = 'conv-main';
         const top = document.createElement('div'); top.className = 'conv-top';
         const name = document.createElement('span'); name.className = 'conv-name'; name.textContent = group.name;
@@ -3346,6 +3573,9 @@
       document.getElementById('groups-feedback').textContent = '';
       renderGroups();
     });
+    document.getElementById('group-description').addEventListener('input', () => {
+      document.getElementById('groups-feedback').textContent = '';
+    });
     document.getElementById('groups-contact-list').addEventListener('click', (e) => {
       const row = e.target.closest('[data-group-member-id]');
       if (!row) return;
@@ -3371,7 +3601,7 @@
       e.preventDefault();
       selectGroup(card.dataset.groupId);
     });
-    document.getElementById('group-members-list').addEventListener('click', async (e) => {
+    document.getElementById('group-info-members').addEventListener('click', async (e) => {
       const remove = e.target.closest('[data-remove-group-user]');
       if (!remove || currentGroupId == null) return;
       if (!confirm('Remove this member from the group?')) return;
@@ -3379,24 +3609,22 @@
       if (r.status >= 400) return alert(r.data.error || 'Could not remove member');
       await loadAll();
       const group = groups.find((item) => String(item.groupId || item.id) === String(currentGroupId));
-      if (group) updateGroupThreadHeader(group);
+      if (group) renderGroupInfo(group);
     });
-    document.getElementById('group-add-member-btn').addEventListener('click', async () => {
+    document.getElementById('group-info-add').addEventListener('click', () => {
+      document.getElementById('group-add-picker').classList.toggle('show');
+    });
+    document.getElementById('group-info-add-confirm').addEventListener('click', async () => {
       if (currentGroupId == null) return;
-      const group = groups.find((item) => String(item.groupId || item.id) === String(currentGroupId));
-      const currentIds = new Set((group && group.members || []).map((member) => Number(member.id)));
-      const options = contacts.filter((contact) => !currentIds.has(Number(contact.id)));
-      if (!options.length) return alert('All of your contacts are already in this group.');
-      const email = prompt('Enter a contact email to add:\n\n' + options.map((contact) => contact.email).join('\n'));
-      if (!email) return;
-      const contact = options.find((item) => item.email.toLowerCase() === email.trim().toLowerCase());
-      if (!contact) return alert('Choose an email from your contacts.');
-      const r = await apiPost('/api/groups/' + encodeURIComponent(currentGroupId) + '/members', { userId: contact.id });
+      const userIds = Array.from(document.querySelectorAll('[data-group-add-choice]:checked')).map((input) => Number(input.value));
+      if (!userIds.length) return alert('Select at least one contact.');
+      const r = await apiPost('/api/groups/' + encodeURIComponent(currentGroupId) + '/members', { userIds });
       if (r.status >= 400) return alert(r.data.error || 'Could not add member');
       await loadAll();
-      updateGroupThreadHeader(r.data.group);
+      renderGroupInfo(r.data.group);
+      document.getElementById('group-add-picker').classList.remove('show');
     });
-    document.getElementById('group-leave-btn').addEventListener('click', async () => {
+    document.getElementById('group-info-leave').addEventListener('click', async () => {
       if (currentGroupId == null || !confirm('Leave this group?')) return;
       const groupId = currentGroupId;
       const r = await apiPost('/api/groups/' + encodeURIComponent(groupId) + '/leave', {});
@@ -3407,7 +3635,7 @@
       renderConversations();
       setRailTab('groups');
     });
-    document.getElementById('group-delete-btn').addEventListener('click', async () => {
+    document.getElementById('group-info-delete').addEventListener('click', async () => {
       if (currentGroupId == null || !confirm('Delete this group and all its messages?')) return;
       const groupId = currentGroupId;
       const r = await apiGroupDelete('/api/groups/' + encodeURIComponent(groupId));
@@ -3418,14 +3646,81 @@
       renderConversations();
       setRailTab('groups');
     });
-    document.getElementById('thread-avatar-button').addEventListener('click', openContactProfile);
+    document.getElementById('thread-avatar-button').addEventListener('click', () => {
+      if (currentGroupId != null) openGroupInfo();
+      else openContactProfile();
+    });
     document.getElementById('contact-profile-close').addEventListener('click', closeContactProfile);
     document.getElementById('contact-profile-view').addEventListener('click', (e) => {
       if (e.target.id === 'contact-profile-view') closeContactProfile();
     });
+    document.getElementById('group-info-close').addEventListener('click', closeGroupInfo);
+    document.getElementById('group-info-view').addEventListener('click', (e) => {
+      if (e.target.id === 'group-info-view') closeGroupInfo();
+    });
+    document.getElementById('group-info-name-edit').addEventListener('click', () => startGroupEdit('name'));
+    document.getElementById('group-info-description-edit').addEventListener('click', () => startGroupEdit('description'));
+    document.getElementById('group-info-name-form').addEventListener('submit', (e) => saveGroupInfo(e, 'name'));
+    document.getElementById('group-info-description-form').addEventListener('submit', (e) => saveGroupInfo(e, 'description'));
+    document.getElementById('group-info-avatar-button').addEventListener('click', () => {
+      const group = groups.find((item) => String(item.groupId || item.id) === String(currentGroupId));
+      if (group && Number(group.creator_id) === getMyId()) document.getElementById('group-info-avatar-input').click();
+    });
+    document.getElementById('group-info-avatar-change').addEventListener('click', () => {
+      const group = groups.find((item) => String(item.groupId || item.id) === String(currentGroupId));
+      if (group && Number(group.creator_id) === getMyId()) document.getElementById('group-info-avatar-input').click();
+    });
+    document.getElementById('group-info-avatar-input').addEventListener('change', async (event) => {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = '';
+      if (!file || currentGroupId == null) return;
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        setGroupInfoFeedback('Choose a JPEG, PNG, or WebP image.', 'error');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setGroupInfoFeedback('Image must be 5MB or smaller.', 'error');
+        return;
+      }
+
+      const previewUrl = URL.createObjectURL(file);
+      paintAvatar(document.getElementById('group-info-avatar'), {
+        display_name: file.name,
+        avatar_url: previewUrl,
+      });
+
+      const form = new FormData();
+      form.append('avatar', file);
+      setGroupInfoFeedback('Uploading group image…');
+      try {
+        const response = await fetch('/api/groups/' + encodeURIComponent(currentGroupId) + '/image', {
+          method: 'PUT',
+          headers: { Authorization: 'Bearer ' + token },
+          body: form,
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Failed to update group image.');
+        const updated = data.group;
+        replaceGroupInState(updated);
+        renderConversations();
+        updateGroupThreadHeader(updated);
+        renderGroupInfo(updated);
+        setGroupInfoFeedback('Group image updated.', 'ok');
+      } catch (err) {
+        setGroupInfoFeedback(err.message || 'Failed to update group image.', 'error');
+        const current = groups.find((item) => String(item.groupId || item.id) === String(currentGroupId));
+        if (current) renderGroupInfo(current);
+      } finally {
+        URL.revokeObjectURL(previewUrl);
+      }
+    });
+    document.querySelectorAll('[data-group-edit-cancel]').forEach((button) => {
+      button.addEventListener('click', () => cancelGroupEdit(button.dataset.groupEditCancel));
+    });
     document.getElementById('groups-create-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = document.getElementById('group-name').value.trim();
+      const description = document.getElementById('group-description').value.trim();
       const feedback = document.getElementById('groups-feedback');
       if (!name) {
         feedback.textContent = 'Give your group a name first.';
@@ -3441,6 +3736,7 @@
       try {
         const result = await apiPost('/api/groups', {
           name,
+          description,
           memberIds: Array.from(selectedGroupMemberIds).map(Number),
         });
         if (result.status >= 400) throw new Error(result.data.error || 'Could not create group');
