@@ -9,6 +9,7 @@
 // socket, and GET is used to load history when a conversation is opened.
 
 const express = require('express');
+const EventEmitter = require('events');
 const db = require('./db');
 const presence = require('./presence');
 const { requireAuth } = require('./auth');
@@ -16,6 +17,7 @@ const { visibleProfileFor } = require('./profile');
 
 const router = express.Router();
 router.use(requireAuth);
+router.groupEvents = new EventEmitter();
 
 // Apply privacy to a contact/conversation row for the logged-in viewer.
 function publicContactFields(viewerId, ownerId, base = {}) {
@@ -117,7 +119,115 @@ router.get('/conversations', (req, res) => {
     });
     return fields;
   });
-  res.json({ conversations });
+  res.json({ conversations, groups: db.getGroupsForUser(req.user.id) });
+});
+
+// ---------- Groups ----------
+
+// POST /api/groups { name, memberIds }
+router.post('/groups', (req, res) => {
+  const name = String(req.body.name || '').trim();
+  const memberIds = Array.isArray(req.body.memberIds)
+    ? [...new Set(req.body.memberIds.map(Number))]
+    : [];
+  if (!name || name.length > 50) {
+    return res.status(400).json({ error: 'Group name is required and must be 50 characters or fewer' });
+  }
+  if (memberIds.length < 1 || memberIds.some((id) => !Number.isInteger(id) || id === req.user.id)) {
+    return res.status(400).json({ error: 'Choose at least one valid group member' });
+  }
+  for (const memberId of memberIds) {
+    if (!db.getUserById(memberId)) return res.status(404).json({ error: 'A selected user does not exist' });
+    if (!db.getContact(req.user.id, memberId)) {
+      return res.status(403).json({ error: 'You can only add your contacts to a group' });
+    }
+  }
+  const group = db.createGroup({ name, creatorId: req.user.id, memberIds });
+  res.status(201).json({ group });
+});
+
+// GET /api/groups
+router.get('/groups', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ groups: db.getGroupsForUser(req.user.id) });
+});
+
+// GET /api/groups/:groupId
+router.get('/groups/:groupId', (req, res) => {
+  const group = db.getGroupForUser(req.params.groupId, req.user.id);
+  if (!group) return res.status(404).json({ error: 'Group not found' });
+  res.json({ group });
+});
+
+// POST /api/groups/:groupId/members { userId }
+router.post('/groups/:groupId/members', (req, res) => {
+  const groupId = String(req.params.groupId);
+  const userId = Number(req.body.userId);
+  if (!db.isGroupCreator(groupId, req.user.id)) {
+    return res.status(403).json({ error: 'Only the group creator can manage members' });
+  }
+  if (!Number.isInteger(userId) || !db.getUserById(userId)) {
+    return res.status(400).json({ error: 'A valid user is required' });
+  }
+  if (db.isGroupMember(groupId, userId)) {
+    return res.status(409).json({ error: 'That user is already in the group' });
+  }
+  db.addGroupMember(groupId, userId);
+  const group = db.getGroupForUser(groupId, req.user.id);
+  if (!group) return res.status(404).json({ error: 'Group not found' });
+  router.groupEvents.emit('added', { group, userId });
+  res.status(201).json({ group });
+});
+
+// DELETE /api/groups/:groupId/members/:userId — creator removes a member.
+router.delete('/groups/:groupId/members/:userId', (req, res) => {
+  const groupId = String(req.params.groupId);
+  const userId = Number(req.params.userId);
+  if (!db.isGroupCreator(groupId, req.user.id)) {
+    return res.status(403).json({ error: 'Only the group creator can remove members' });
+  }
+  if (!Number.isInteger(userId) || userId === req.user.id) {
+    return res.status(400).json({ error: 'The creator cannot be removed' });
+  }
+  if (!db.isGroupMember(groupId, userId)) {
+    return res.status(404).json({ error: 'Member not found' });
+  }
+  db.removeGroupMember(groupId, userId);
+  router.groupEvents.emit('removed', { groupId, userId });
+  res.json({ ok: true, groupId, userId });
+});
+
+// POST /api/groups/:groupId/leave — any member may leave; the creator must delete.
+router.post('/groups/:groupId/leave', (req, res) => {
+  const groupId = String(req.params.groupId);
+  if (!db.isGroupMember(groupId, req.user.id)) {
+    return res.status(404).json({ error: 'Group not found' });
+  }
+  if (db.isGroupCreator(groupId, req.user.id)) {
+    return res.status(403).json({ error: 'The group creator must delete the group' });
+  }
+  db.removeGroupMember(groupId, req.user.id);
+  router.groupEvents.emit('left', { groupId, userId: req.user.id });
+  res.json({ ok: true, groupId });
+});
+
+// DELETE /api/groups/:groupId — creator-only, with SQLite cascades removing members/messages.
+router.delete('/groups/:groupId', (req, res) => {
+  const groupId = String(req.params.groupId);
+  if (!db.isGroupCreator(groupId, req.user.id)) {
+    return res.status(403).json({ error: 'Only the group creator can delete the group' });
+  }
+  if (!db.deleteGroup(groupId)) return res.status(404).json({ error: 'Group not found' });
+  router.groupEvents.emit('deleted', { groupId });
+  res.json({ ok: true, groupId });
+});
+
+// GET /api/groups/:groupId/messages
+router.get('/groups/:groupId/messages', (req, res) => {
+  const group = db.getGroupForUser(req.params.groupId, req.user.id);
+  if (!group) return res.status(404).json({ error: 'Group not found' });
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ group, messages: db.getGroupTimeline(req.params.groupId, req.user.id) });
 });
 
 // ---------- Calls ----------
@@ -170,10 +280,35 @@ router.get('/messages/:contactId', (req, res) => {
 
 // POST /api/messages  { receiverId, text, messageType?, fileUrl?, ... }
 router.post('/messages', (req, res) => {
+  const groupId = req.body.groupId || req.body.group_id || null;
   const receiverId = Number(req.body.receiverId);
   const text = (req.body.text || '').trim();
   const messageType = req.body.messageType || req.body.message_type || 'text';
   const fileUrl = req.body.fileUrl || req.body.file_url || null;
+
+  if (groupId) {
+    if (!db.getGroupForUser(groupId, req.user.id)) {
+      return res.status(403).json({ error: 'You must belong to this group' });
+    }
+    if (messageType === 'text' && !text) {
+      return res.status(400).json({ error: 'Message text is required' });
+    }
+    if (messageType !== 'text' && !fileUrl) {
+      return res.status(400).json({ error: 'fileUrl is required for media messages' });
+    }
+    const message = db.createMessage({
+      senderId: req.user.id,
+      groupId,
+      text,
+      status: 'sent',
+      messageType,
+      fileUrl,
+      thumbnailUrl: req.body.thumbnailUrl || req.body.thumbnail_url || null,
+      fileName: req.body.fileName || req.body.file_name || null,
+      fileSize: req.body.fileSize || req.body.file_size || null,
+    });
+    return res.status(201).json({ message });
+  }
 
   if (!Number.isInteger(receiverId)) {
     return res.status(400).json({ error: 'receiverId is required' });

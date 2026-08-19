@@ -28,6 +28,44 @@ const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const IS_PROD = process.env.NODE_ENV === 'production';
 
+function socketsForUser(userId) {
+  return [...io.sockets.sockets.values()].filter((socket) => socket.data.userId === userId);
+}
+
+api.groupEvents.on('added', ({ group, userId }) => {
+  socketsForUser(userId).forEach((socket) => {
+    socket.join(`group:${group.groupId}`);
+    socket.emit('group:created', { group });
+  });
+  io.to(`group:${group.groupId}`).emit('group:updated', { group });
+});
+
+api.groupEvents.on('removed', ({ groupId, userId }) => {
+  socketsForUser(userId).forEach((socket) => {
+    socket.leave(`group:${groupId}`);
+    socket.emit('group:removed', { groupId });
+  });
+  io.to(`group:${groupId}`).emit('group:updated', { groupId });
+});
+
+api.groupEvents.on('left', ({ groupId, userId }) => {
+  socketsForUser(userId).forEach((socket) => {
+    socket.leave(`group:${groupId}`);
+    socket.emit('group:removed', { groupId });
+  });
+  io.to(`group:${groupId}`).emit('group:updated', { groupId });
+});
+
+api.groupEvents.on('deleted', ({ groupId }) => {
+  const room = io.sockets.adapter.rooms.get(`group:${groupId}`) || new Set();
+  [...room].forEach((socketId) => {
+    const socket = io.sockets.sockets.get(socketId);
+    if (!socket) return;
+    socket.leave(`group:${groupId}`);
+    socket.emit('group:removed', { groupId, deleted: true });
+  });
+});
+
 app.use(cors());
 app.use(express.json());
 
@@ -77,7 +115,9 @@ io.on('connection', (socket) => {
   const userId = socket.data.userId;
 
   socket.join(`user:${userId}`);
+  db.getGroupsForUser(userId).forEach((group) => socket.join(`group:${group.groupId}`));
   socket.data.activeChat = null;
+  socket.data.activeGroup = null;
 
   const wasOffline = !presence.isOnline(userId);
   presence.addConnection(userId);
@@ -98,8 +138,17 @@ io.on('connection', (socket) => {
 
   // Opening a chat marks that contact's messages to me as read and notifies them.
   socket.on('chat:open', (payload = {}) => {
+    const groupId = payload.groupId || null;
+    if (groupId) {
+      if (!db.isGroupMember(groupId, userId)) return;
+      socket.data.activeGroup = groupId;
+      socket.data.activeChat = null;
+      socket.join(`group:${groupId}`);
+      return;
+    }
     const contactId = payload.contactId ? Number(payload.contactId) : null;
     socket.data.activeChat = contactId;
+    socket.data.activeGroup = null;
     if (!contactId) return;
 
     const messageIds = db.markConversationRead(userId, contactId);
@@ -120,6 +169,7 @@ io.on('connection', (socket) => {
   // Send a text or media message. Media must already be uploaded via /api/upload.
   // The SAME serialized DB row is emitted to sender and receiver — no field drops.
   async function handleMessageSend(payload = {}, ack) {
+    const groupId = payload.groupId || payload.group_id || null;
     const receiverId = Number(payload.receiverId);
     const text = (payload.text || '').trim();
     const messageType = payload.messageType || payload.message_type || 'text';
@@ -129,6 +179,40 @@ io.on('connection', (socket) => {
     const fileSize = payload.fileSize != null
       ? Number(payload.fileSize)
       : (payload.file_size != null ? Number(payload.file_size) : null);
+
+    if (groupId) {
+      if (!db.isGroupMember(groupId, userId)) {
+        if (typeof ack === 'function') ack({ error: 'You must belong to this group' });
+        return;
+      }
+      if (!db.getGroupForUser(groupId, userId)) {
+        if (typeof ack === 'function') ack({ error: 'This group is no longer available' });
+        return;
+      }
+      if (messageType === 'text' && !text) {
+        if (typeof ack === 'function') ack({ error: 'text is required for text messages' });
+        return;
+      }
+      if (messageType !== 'text' && !fileUrl) {
+        if (typeof ack === 'function') ack({ error: 'fileUrl is required for media messages' });
+        return;
+      }
+      const row = db.createMessage({
+        senderId: userId,
+        groupId,
+        text,
+        status: 'sent',
+        messageType,
+        fileUrl,
+        thumbnailUrl,
+        fileName,
+        fileSize,
+      });
+      const message = db.toPublicMessage(row);
+      io.to(`group:${groupId}`).emit('message:new', message);
+      if (typeof ack === 'function') ack({ message });
+      return;
+    }
 
     if (!Number.isInteger(receiverId)) {
       if (typeof ack === 'function') ack({ error: 'receiverId is required' });
@@ -202,6 +286,29 @@ io.on('connection', (socket) => {
   }
 
   socket.on('message:send', handleMessageSend);
+
+  socket.on('group:join', (payload = {}, ack) => {
+    const groupId = payload.groupId || payload.group_id;
+    if (!groupId || !db.isGroupMember(groupId, userId)) {
+      if (typeof ack === 'function') ack({ error: 'You must belong to this group' });
+      return;
+    }
+    socket.join(`group:${groupId}`);
+    if (typeof ack === 'function') ack({ ok: true });
+  });
+
+  socket.on('group:announce', (payload = {}, ack) => {
+    const groupId = payload.groupId || payload.group_id;
+    const group = groupId && db.getGroupForUser(groupId, userId);
+    if (!group) {
+      if (typeof ack === 'function') ack({ error: 'You must belong to this group' });
+      return;
+    }
+    for (const member of group.members) {
+      io.to(`user:${member.id}`).emit('group:created', { group });
+    }
+    if (typeof ack === 'function') ack({ ok: true });
+  });
 
   // ---------- Voice / video call signaling (WebRTC media is peer-to-peer) ----------
   socket.on('call:invite', (payload = {}, ack) => {
